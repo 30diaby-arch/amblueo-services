@@ -4,7 +4,9 @@ set -euo pipefail
 AMBLUEO_INFRA_RACINE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$AMBLUEO_INFRA_RACINE"
 AMBLUEO_INFRA_ARGUMENTS=(--project-directory "$AMBLUEO_INFRA_RACINE" --env-file Operations/.env -f Operations/compose.yaml)
-if [[ "${AMBLUEO_INFRA_CIBLE:-local}" == production ]]; then
-    AMBLUEO_INFRA_ARGUMENTS+=(-f Operations/compose.prod.yaml)
-fi
+case "${AMBLUEO_INFRA_CIBLE:-local}" in
+    local) ;;
+    recette|production) AMBLUEO_INFRA_ARGUMENTS+=(-f Operations/compose.prod.yaml) ;;
+    *) printf 'Cible Compose inconnue. Utiliser local, recette ou production.\n' >&2; exit 2 ;;
+esac
 exec docker compose "${AMBLUEO_INFRA_ARGUMENTS[@]}" "$@"

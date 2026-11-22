@@ -49,6 +49,8 @@ AMBLUEO_INFRA_SQLITE=1 .venv/bin/python Backend/manage.py runserver
 - [Architecture et droits](Documentation/architecture.md)
 - [Règles métier](Documentation/regles-metier.md)
 - [Déploiement et exploitation](Documentation/exploitation.md)
+- [Déploiement de la recette HTTPS](Documentation/deploiement-recette.md)
+- [Feuille de route du MVP](Documentation/roadmap-mvp.md)
 - [Guide utilisateur](Documentation/guide-utilisateur.md)
 - [Recette et vérifications](Documentation/recette.md)
 - [Historique des versions](Documentation/CHANGELOG.md)

@@ -1,13 +1,29 @@
 limit_req_zone $binary_remote_addr zone=auth:10m rate=10r/m;
 
 server {
+    listen 80 default_server;
+    server_name _;
+    server_tokens off;
+    return 444;
+}
+
+server {
     listen 80;
     access_log off;
     server_name ${AMBLUEO_INFRA_DOMAINE};
     server_tokens off;
     location ^~ /.well-known/acme-challenge/ { root /var/www/acme; }
-    location / { return 301 https://${AMBLUEO_INFRA_DOMAINE}$request_uri; }
+    location / { return 308 https://${AMBLUEO_INFRA_DOMAINE}$request_uri; }
 }
+server {
+    listen 443 ssl default_server;
+    server_name _;
+    server_tokens off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_reject_handshake on;
+    return 421;
+}
+
 server {
     listen 443 ssl;
     server_name ${AMBLUEO_INFRA_DOMAINE};
@@ -15,6 +31,8 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/${AMBLUEO_INFRA_DOMAINE}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     server_tokens off;
+    add_header Strict-Transport-Security "max-age=3600" always;
+    proxy_hide_header Strict-Transport-Security;
     client_max_body_size 9m;
     limit_req_status 429;
     location ^~ /static/ { alias /data/static/; }
