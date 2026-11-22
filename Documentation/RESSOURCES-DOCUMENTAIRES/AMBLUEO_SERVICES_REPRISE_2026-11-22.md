@@ -1,5 +1,6 @@
 # Amblueo Services — Reprise des travaux par une IA
 
+> Archive de la livraison du 22 novembre 2026. Pour les consignes et chemins actuels, voir [AGENTS.md](../../AGENTS.md).
 Version documentaire 1.0 — 22 novembre 2026 — pilote applicatif 0.1.0.
 
 ## Prompt de démarrage à utiliser dans une nouvelle session
@@ -229,12 +230,12 @@ AMBLUEO_INFRA_SQLITE=1 .venv/bin/python manage.py runserver
 
 ## Documentation
 
-- [Architecture et droits](docs/architecture.md)
-- [Règles métier](docs/regles-metier.md)
-- [Déploiement et exploitation](docs/exploitation.md)
-- [Guide utilisateur](docs/guide-utilisateur.md)
-- [Recette et vérifications](docs/recette.md)
-- [Historique des versions](CHANGELOG.md)
+- [Architecture et droits](../architecture.md)
+- [Règles métier](../regles-metier.md)
+- [Déploiement et exploitation](../exploitation.md)
+- [Guide utilisateur](../guide-utilisateur.md)
+- [Recette et vérifications](../recette.md)
+- [Historique des versions](../CHANGELOG.md)
 
 
 ---

@@ -229,12 +229,12 @@ AMBLUEO_INFRA_SQLITE=1 .venv/bin/python manage.py runserver
 
 ## Documentation
 
-- [Architecture et droits](docs/architecture.md)
-- [Règles métier](docs/regles-metier.md)
-- [Déploiement et exploitation](docs/exploitation.md)
-- [Guide utilisateur](docs/guide-utilisateur.md)
-- [Recette et vérifications](docs/recette.md)
-- [Historique des versions](CHANGELOG.md)
+- [Architecture et droits](../architecture.md)
+- [Règles métier](../regles-metier.md)
+- [Déploiement et exploitation](../exploitation.md)
+- [Guide utilisateur](../guide-utilisateur.md)
+- [Recette et vérifications](../recette.md)
+- [Historique des versions](../CHANGELOG.md)
 
 
 ---

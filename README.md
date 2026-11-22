@@ -9,14 +9,14 @@ Debian 12.
 Il faut Docker Engine, le plugin Compose (2.24.4 ou ultérieur) et les ports locaux disponibles.
 
 ```bash
-cp .env.example .env
-chmod 600 .env
-./ops/compose.sh up -d --wait db
-./ops/compose.sh build web
-./ops/compose.sh run --rm web python manage.py migrate
-./ops/compose.sh run --rm web python manage.py collectstatic --noinput
-./ops/compose.sh run --rm web python manage.py seed_demo
-./ops/compose.sh up -d --wait
+cp Operations/.env.example Operations/.env
+chmod 600 Operations/.env
+./Operations/compose.sh up -d --wait db
+./Operations/compose.sh build web
+./Operations/compose.sh run --rm web python manage.py migrate
+./Operations/compose.sh run --rm web python manage.py collectstatic --noinput
+./Operations/compose.sh run --rm web python manage.py seed_demo
+./Operations/compose.sh up -d --wait
 ```
 
 Ouvrir http://localhost:8080. Les comptes locaux `demo_dirigeant`,
@@ -27,8 +27,8 @@ le mot de passe fictif `Amblueo-demo-local-42!`. Le dernier compte appartient
 ## Lancer les tests
 
 ```bash
-./ops/compose.sh run --rm web python manage.py test
-./ops/compose.sh run --rm web python manage.py makemigrations --check --dry-run
+./Operations/compose.sh run --rm web python manage.py test
+./Operations/compose.sh run --rm web python manage.py makemigrations --check --dry-run
 ```
 
 Pour une vérification rapide sans Docker, utiliser Python 3.12 et SQLite.
@@ -36,19 +36,20 @@ Le test de règlements concurrents est réservé à PostgreSQL.
 
 ```bash
 python3.12 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-AMBLUEO_INFRA_SQLITE=1 .venv/bin/python manage.py test
-AMBLUEO_INFRA_SQLITE=1 .venv/bin/python manage.py migrate
-AMBLUEO_INFRA_SQLITE=1 .venv/bin/python manage.py seed_demo
-AMBLUEO_INFRA_SQLITE=1 .venv/bin/python manage.py runserver
+.venv/bin/pip install -r Backend/requirements.txt
+AMBLUEO_INFRA_SQLITE=1 .venv/bin/python Backend/manage.py test
+AMBLUEO_INFRA_SQLITE=1 .venv/bin/python Backend/manage.py migrate
+AMBLUEO_INFRA_SQLITE=1 .venv/bin/python Backend/manage.py seed_demo
+AMBLUEO_INFRA_SQLITE=1 .venv/bin/python Backend/manage.py runserver
 ```
 
 ## Documentation
 
-- [Architecture et droits](docs/architecture.md)
-- [Règles métier](docs/regles-metier.md)
-- [Déploiement et exploitation](docs/exploitation.md)
-- [Guide utilisateur](docs/guide-utilisateur.md)
-- [Recette et vérifications](docs/recette.md)
-- [Historique des versions](CHANGELOG.md)
+- [Organisation du dépôt et consignes pour les agents](AGENTS.md)
+- [Architecture et droits](Documentation/architecture.md)
+- [Règles métier](Documentation/regles-metier.md)
+- [Déploiement et exploitation](Documentation/exploitation.md)
+- [Guide utilisateur](Documentation/guide-utilisateur.md)
+- [Recette et vérifications](Documentation/recette.md)
+- [Historique des versions](Documentation/CHANGELOG.md)
 # amblueo-services

@@ -13,20 +13,20 @@ AMBLUEO_INFRA_RELANCER=0
 cleanup() {
     AMBLUEO_INFRA_RESULTAT=$?
     if [[ "$AMBLUEO_INFRA_RELANCER" == 1 ]]; then
-        ./ops/compose.sh up -d web proxy || AMBLUEO_INFRA_RESULTAT=1
+        ./Operations/compose.sh up -d web proxy || AMBLUEO_INFRA_RESULTAT=1
     fi
     rm -rf -- "$AMBLUEO_INFRA_TEMP"
     exit "$AMBLUEO_INFRA_RESULTAT"
 }
 trap cleanup EXIT
-if [[ -n "$(./ops/compose.sh ps --status running -q web)" ]]; then
+if [[ -n "$(./Operations/compose.sh ps --status running -q web)" ]]; then
     AMBLUEO_INFRA_RELANCER=1
-    ./ops/compose.sh stop proxy web
+    ./Operations/compose.sh stop proxy web
 fi
-./ops/compose.sh exec -T db sh -ec 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"' > "$AMBLUEO_INFRA_TEMP/postgres.dump"
-./ops/compose.sh run --rm -T --no-deps web tar -C /data/private -cf - . > "$AMBLUEO_INFRA_TEMP/justificatifs.tar"
+./Operations/compose.sh exec -T db sh -ec 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"' > "$AMBLUEO_INFRA_TEMP/postgres.dump"
+./Operations/compose.sh run --rm -T --no-deps web tar -C /data/private -cf - . > "$AMBLUEO_INFRA_TEMP/justificatifs.tar"
 if [[ "$AMBLUEO_INFRA_RELANCER" == 1 ]]; then
-    ./ops/compose.sh up -d --wait web proxy
+    ./Operations/compose.sh up -d --wait web proxy
     AMBLUEO_INFRA_RELANCER=0
 fi
 (
@@ -35,6 +35,6 @@ fi
     tar -czf "$AMBLUEO_INFRA_ARCHIVE" SHA256SUMS postgres.dump justificatifs.tar
 )
 rsync -e 'ssh -o BatchMode=yes' -- "$AMBLUEO_INFRA_TEMP/$AMBLUEO_INFRA_ARCHIVE" "${AMBLUEO_INFRA_DESTINATION_SAUVEGARDE%/}/"
-mkdir -p backups
-date -u +%s > backups/derniere-sauvegarde-epoch
+mkdir -p Operations/backups
+date -u +%s > Operations/backups/derniere-sauvegarde-epoch
 printf '%s\n' "$AMBLUEO_INFRA_ARCHIVE"

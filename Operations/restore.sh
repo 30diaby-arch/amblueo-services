@@ -14,12 +14,12 @@ for AMBLUEO_INFRA_FICHIER in SHA256SUMS postgres.dump justificatifs.tar; do
     tar -xOzf "$AMBLUEO_INFRA_ARCHIVE" "$AMBLUEO_INFRA_FICHIER" > "$AMBLUEO_INFRA_TEMP/$AMBLUEO_INFRA_FICHIER"
 done
 (cd "$AMBLUEO_INFRA_TEMP" && sha256sum -c SHA256SUMS)
-./ops/compose.sh up -d --wait db
-./ops/compose.sh exec -T db sh -ec '
+./Operations/compose.sh up -d --wait db
+./Operations/compose.sh exec -T db sh -ec '
     test "$(psql -X -Atq -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT count(*) FROM pg_tables WHERE schemaname = current_schema()")" = 0
 '
-./ops/compose.sh run --rm -T --no-deps web sh -ec 'test -z "$(ls -A /data/private)"'
-./ops/compose.sh exec -T db sh -ec 'pg_restore -1 --exit-on-error --no-owner --no-privileges -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < "$AMBLUEO_INFRA_TEMP/postgres.dump"
-./ops/compose.sh run --rm -T --no-deps web tar --no-same-owner --no-same-permissions -C /data/private -xf - < "$AMBLUEO_INFRA_TEMP/justificatifs.tar"
-./ops/compose.sh run --rm -T --no-deps web python manage.py migrate --check
+./Operations/compose.sh run --rm -T --no-deps web sh -ec 'test -z "$(ls -A /data/private)"'
+./Operations/compose.sh exec -T db sh -ec 'pg_restore -1 --exit-on-error --no-owner --no-privileges -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < "$AMBLUEO_INFRA_TEMP/postgres.dump"
+./Operations/compose.sh run --rm -T --no-deps web tar --no-same-owner --no-same-permissions -C /data/private -xf - < "$AMBLUEO_INFRA_TEMP/justificatifs.tar"
+./Operations/compose.sh run --rm -T --no-deps web python manage.py migrate --check
 printf '%s\n' 'Restauration chargée. Vérifier les soldes et un justificatif avant de terminer la recette.'

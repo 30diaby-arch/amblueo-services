@@ -4,6 +4,7 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
 AMBLUEO_INFRA_RACINE = Path(__file__).resolve().parent.parent
+AMBLUEO_UI_RACINE = AMBLUEO_INFRA_RACINE.parent / "Frontend"
 DEBUG = os.getenv("AMBLUEO_INFRA_MODE", "local") == "local"
 SECRET_KEY = os.getenv("AMBLUEO_SECURITE_CLE_SECRETE")
 if not SECRET_KEY and DEBUG:
@@ -26,6 +27,7 @@ ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 TEMPLATES = [{
     "BACKEND": "django.template.backends.django.DjangoTemplates",
+    "DIRS": [AMBLUEO_UI_RACINE / "templates"],
     "APP_DIRS": True,
     "OPTIONS": {"context_processors": [
         "django.template.context_processors.request",
@@ -61,6 +63,7 @@ LANGUAGE_CODE = "fr"
 LANGUAGES = [("fr", "Français")]
 TIME_ZONE = os.getenv("AMBLUEO_INFRA_FUSEAU", "UTC")
 USE_TZ = True
+STATICFILES_DIRS = [AMBLUEO_UI_RACINE / "static"]
 STATIC_URL = "/static/"
 STATIC_ROOT = os.getenv("AMBLUEO_INFRA_STATIQUES", AMBLUEO_INFRA_RACINE / "staticfiles")
 MEDIA_ROOT = os.getenv("AMBLUEO_INFRA_JUSTIFICATIFS", AMBLUEO_INFRA_RACINE / "private")
