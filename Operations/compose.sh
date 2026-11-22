@@ -9,4 +9,8 @@ case "${AMBLUEO_INFRA_CIBLE:-local}" in
     recette|production) AMBLUEO_INFRA_ARGUMENTS+=(-f Operations/compose.prod.yaml) ;;
     *) printf 'Cible Compose inconnue. Utiliser local, recette ou production.\n' >&2; exit 2 ;;
 esac
+if [[ "${AMBLUEO_INFRA_POSTFIX_HOTE:-}" == 1 ]] ||
+    { [[ ! -v AMBLUEO_INFRA_POSTFIX_HOTE ]] && grep -qFx 'AMBLUEO_INFRA_POSTFIX_HOTE=1' Operations/.env; }; then
+    AMBLUEO_INFRA_ARGUMENTS+=(-f Operations/compose.postfix.yaml)
+fi
 exec docker compose "${AMBLUEO_INFRA_ARGUMENTS[@]}" "$@"

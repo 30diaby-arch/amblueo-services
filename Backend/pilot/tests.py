@@ -46,9 +46,13 @@ class PilotTest(TestCase):
     def test_company_invitation_deactivation_and_reset(self):
         self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
         self.assertEqual(self.client.post(reverse("company_new"), {"name": "Nouvelle", "currency": "EUR"}).status_code, 302)
-        AMBLUEO_TEST_INVITATION = self.client.post(reverse("invite", args=[self.AMBLUEO_TEST_A.pk]),
-                                                  {"email": "invite@example.test", "role": "member"})
+        with self.captureOnCommitCallbacks(execute=True):
+            AMBLUEO_TEST_INVITATION = self.client.post(reverse("invite", args=[self.AMBLUEO_TEST_A.pk]),
+                                                      {"email": "invite@example.test", "role": "member"})
         AMBLUEO_TEST_URL = re.search(r'/invitation/[^/"]+/', AMBLUEO_TEST_INVITATION.content.decode()).group()
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["invite@example.test"])
+        self.assertIn(f"http://testserver{AMBLUEO_TEST_URL}", mail.outbox[0].body)
         self.client.logout()
         self.assertEqual(self.client.post(AMBLUEO_TEST_URL, dict(username="invite",
             password1="Nouveau-Soleil-42", password2="Nouveau-Soleil-42")).status_code, 302)
@@ -60,7 +64,8 @@ class PilotTest(TestCase):
         self.assertEqual(self.client.get(reverse("company", args=[self.AMBLUEO_TEST_A.pk])).status_code, 404)
         self.client.logout()
         self.assertEqual(self.client.post(reverse("password_reset"), {"email": "invite@example.test"}).status_code, 302)
-        self.assertIn("/mot-de-passe/", mail.outbox[0].body)
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn("/mot-de-passe/", mail.outbox[1].body)
 
     def test_projects_tasks_and_access(self):
         self.client.force_login(self.AMBLUEO_TEST_MANAGER.user)
@@ -71,21 +76,37 @@ class PilotTest(TestCase):
         self.assertEqual(self.client.post(AMBLUEO_TEST_NEW, AMBLUEO_TEST_DATA).status_code, 200)
         self.assertFalse(Project.objects.filter(name="Migration").exists())
         AMBLUEO_TEST_DATA["owner"] = self.AMBLUEO_TEST_MANAGER.pk
-        self.assertEqual(self.client.post(AMBLUEO_TEST_NEW, AMBLUEO_TEST_DATA).status_code, 302)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.client.post(AMBLUEO_TEST_NEW, AMBLUEO_TEST_DATA).status_code, 302)
         AMBLUEO_TEST_PROJET = Project.objects.get(name="Migration")
-        self.assertEqual(self.client.post(reverse("task_new", args=[AMBLUEO_TEST_A, AMBLUEO_TEST_PROJET.pk]), dict(
+        AMBLUEO_TEST_TACHE_DATA = dict(
             title="Recette", assignee=self.AMBLUEO_TEST_MEMBER.pk, status="todo",
-            start=self.AMBLUEO_TEST_DATE, end=self.AMBLUEO_TEST_DATE, estimated=8, actual=0)).status_code, 302)
+            start=self.AMBLUEO_TEST_DATE, end=self.AMBLUEO_TEST_DATE, estimated=8, actual=0)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.client.post(reverse("task_new", args=[AMBLUEO_TEST_A, AMBLUEO_TEST_PROJET.pk]),
+                                              AMBLUEO_TEST_TACHE_DATA).status_code, 302)
         AMBLUEO_TEST_TASK = Task.objects.get()
+        AMBLUEO_TEST_TACHE_URL = reverse("task_edit", args=[AMBLUEO_TEST_A, AMBLUEO_TEST_PROJET.pk, AMBLUEO_TEST_TASK.pk])
         self.client.force_login(self.AMBLUEO_TEST_MEMBER.user)
-        self.assertEqual(self.client.post(reverse("task_edit", args=[AMBLUEO_TEST_A, AMBLUEO_TEST_PROJET.pk,
-            AMBLUEO_TEST_TASK.pk]), dict(status="done", actual=7, title="Interdit")).status_code, 302)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.client.post(AMBLUEO_TEST_TACHE_URL,
+                dict(status="done", actual=7, title="Interdit")).status_code, 302)
+        self.assertEqual([AMBLUEO_TEST_MAIL.to for AMBLUEO_TEST_MAIL in mail.outbox], [
+            [self.AMBLUEO_TEST_MANAGER.user.email], [self.AMBLUEO_TEST_MEMBER.user.email],
+        ])
         AMBLUEO_TEST_TASK.refresh_from_db()
         self.assertEqual((AMBLUEO_TEST_TASK.title, AMBLUEO_TEST_TASK.status, AMBLUEO_TEST_TASK.actual), ("Recette", "done", 7))
         AMBLUEO_TEST_OTHER_PROJET = self.project(self.AMBLUEO_TEST_OTHER, "Confidentiel")
         self.assertEqual(self.client.get(reverse("project", args=[AMBLUEO_TEST_A, AMBLUEO_TEST_OTHER_PROJET.pk])).status_code, 404)
         self.assertEqual(self.client.post(reverse("project_edit", args=[self.AMBLUEO_TEST_B.pk,
             AMBLUEO_TEST_OTHER_PROJET.pk]), AMBLUEO_TEST_DATA).status_code, 404)
+        self.client.force_login(self.AMBLUEO_TEST_MANAGER.user)
+        AMBLUEO_TEST_TACHE_DATA["assignee"] = self.AMBLUEO_TEST_MANAGER.pk
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.client.post(AMBLUEO_TEST_TACHE_URL, AMBLUEO_TEST_TACHE_DATA).status_code, 302)
+            self.assertEqual(self.client.post(AMBLUEO_TEST_TACHE_URL, AMBLUEO_TEST_TACHE_DATA).status_code, 302)
+        self.assertEqual(len(mail.outbox), 3)
+        self.assertEqual(mail.outbox[-1].to, [self.AMBLUEO_TEST_MANAGER.user.email])
 
     def test_full_financial_recipe(self):
         AMBLUEO_TEST_PROJET = self.project(self.AMBLUEO_TEST_MANAGER, "Infrastructure")

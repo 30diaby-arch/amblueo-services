@@ -14,6 +14,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from .. import finance, forms
+from ..email import envoyer_apres_validation
 from ..models import Audit, Invitation, Membership, Operation, Project, Role, Task
 from .common import (
     AMBLUEO_SECURITE_FINANCE, AMBLUEO_SECURITE_GESTION, AMBLUEO_SECURITE_SUIVI,
@@ -113,8 +114,15 @@ def invite(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
         AMBLUEO_UI_INVITATION.digest = hashlib.sha256(AMBLUEO_SECURITE_JETON.encode()).hexdigest()
         AMBLUEO_UI_INVITATION.expires = timezone.now() + timedelta(days=2)
         AMBLUEO_UI_INVITATION.save()
-        return render(AMBLUEO_UI_REQUETE, "pilot/link.html", {"link": AMBLUEO_UI_REQUETE.build_absolute_uri(
-            reverse("accept", args=[AMBLUEO_SECURITE_JETON]))})
+        AMBLUEO_MAIL_LIEN = AMBLUEO_UI_REQUETE.build_absolute_uri(reverse("accept", args=[AMBLUEO_SECURITE_JETON]))
+        envoyer_apres_validation(
+            "Votre invitation à Amblueo Services",
+            f"Vous avez été invité à rejoindre {AMBLUEO_UI_MEMBRE.company.name} sur Amblueo Services.\n\n"
+            f"Pour accepter l’invitation ou créer votre compte :\n{AMBLUEO_MAIL_LIEN}\n\n"
+            "Ce lien est valable 48 heures et utilisable une seule fois.",
+            AMBLUEO_UI_INVITATION.email,
+        )
+        return render(AMBLUEO_UI_REQUETE, "pilot/link.html", {"link": AMBLUEO_MAIL_LIEN})
     return edit(AMBLUEO_UI_REQUETE, "Inviter un membre", forms.InvitationForm(form_data(AMBLUEO_UI_REQUETE)), save)
 
 

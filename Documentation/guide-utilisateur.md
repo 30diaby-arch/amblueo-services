@@ -28,4 +28,7 @@
    L'historique récent est visible sur la page de l'entreprise.
 
 La page de connexion propose une réinitialisation du mot de passe. En local,
-le lien figure dans les journaux de Django. En production, il est envoyé par SMTP.
+les messages figurent par défaut dans les journaux de Django. Lorsque le relais
+SMTP est configuré, le lien de réinitialisation et le lien d’invitation sont
+envoyés par e-mail. Un e-mail est aussi envoyé à la personne qui reçoit une tâche
+ou devient responsable d’un projet.

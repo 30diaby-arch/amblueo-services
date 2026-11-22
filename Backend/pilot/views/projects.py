@@ -2,8 +2,10 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from .. import finance, forms
+from ..email import envoyer_apres_validation
 from ..models import Budget, Membership, Project, Task
 from .common import (
     AMBLUEO_SECURITE_FINANCE, AMBLUEO_SECURITE_GESTION, AMBLUEO_SECURITE_SUIVI,
@@ -12,13 +14,27 @@ from .common import (
 
 
 @login_required
+@transaction.atomic
 def project_edit(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID=None):
     AMBLUEO_UI_MEMBRE = membership(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_SECURITE_GESTION)
-    AMBLUEO_UI_PROJET = get_object_or_404(Project, pk=AMBLUEO_UI_OBJET_ID, company_id=AMBLUEO_UI_ENTREPRISE_ID) if AMBLUEO_UI_OBJET_ID else Project(company=AMBLUEO_UI_MEMBRE.company)
+    AMBLUEO_UI_PROJETS = Project.objects.filter(company_id=AMBLUEO_UI_ENTREPRISE_ID)
+    if AMBLUEO_UI_REQUETE.method == "POST":
+        AMBLUEO_UI_PROJETS = AMBLUEO_UI_PROJETS.select_for_update()
+    AMBLUEO_UI_PROJET = get_object_or_404(AMBLUEO_UI_PROJETS, pk=AMBLUEO_UI_OBJET_ID) if AMBLUEO_UI_OBJET_ID else Project(company=AMBLUEO_UI_MEMBRE.company)
+    AMBLUEO_MAIL_ANCIEN_RESPONSABLE = AMBLUEO_UI_PROJET.owner_id
     AMBLUEO_UI_FORM = forms.ProjectForm(form_data(AMBLUEO_UI_REQUETE), instance=AMBLUEO_UI_PROJET)
     AMBLUEO_UI_FORM.fields["owner"].queryset = Membership.objects.filter(company_id=AMBLUEO_UI_ENTREPRISE_ID, active=True)
     def save(AMBLUEO_UI_FORMULAIRE):
-        return redirect("project", AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_FORMULAIRE.save().pk)
+        AMBLUEO_UI_PROJET_ENREGISTRE = AMBLUEO_UI_FORMULAIRE.save()
+        AMBLUEO_UI_REPONSE = redirect("project", AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_PROJET_ENREGISTRE.pk)
+        if AMBLUEO_UI_PROJET_ENREGISTRE.owner_id != AMBLUEO_MAIL_ANCIEN_RESPONSABLE:
+            AMBLUEO_MAIL_LIEN = AMBLUEO_UI_REQUETE.build_absolute_uri(AMBLUEO_UI_REPONSE.url)
+            envoyer_apres_validation(
+                "Un projet vous a été confié",
+                f"Vous êtes responsable du projet « {AMBLUEO_UI_PROJET_ENREGISTRE.name} ».\n\n{AMBLUEO_MAIL_LIEN}",
+                AMBLUEO_UI_PROJET_ENREGISTRE.owner.user.email,
+            )
+        return AMBLUEO_UI_REPONSE
     return edit(AMBLUEO_UI_REQUETE, "Fiche projet", AMBLUEO_UI_FORM, save)
 
 
@@ -50,6 +66,7 @@ def task_edit(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID,
         get_object_or_404(AMBLUEO_UI_TACHES, pk=AMBLUEO_UI_TACHE_ID)
         if AMBLUEO_UI_TACHE_ID else Task(project=AMBLUEO_UI_PROJET)
     )
+    AMBLUEO_MAIL_ANCIEN_MEMBRE = AMBLUEO_UI_TACHE.assignee_id
     if AMBLUEO_UI_MEMBRE.role in AMBLUEO_SECURITE_GESTION:
         AMBLUEO_UI_FORM = forms.TaskForm(form_data(AMBLUEO_UI_REQUETE), instance=AMBLUEO_UI_TACHE)
         AMBLUEO_UI_FORM.fields["assignee"].queryset = Membership.objects.filter(company_id=AMBLUEO_UI_ENTREPRISE_ID, active=True)
@@ -58,6 +75,16 @@ def task_edit(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID,
     else:
         raise PermissionDenied
     def save(AMBLUEO_UI_FORMULAIRE):
-        AMBLUEO_UI_FORMULAIRE.save()
+        AMBLUEO_UI_TACHE_ENREGISTREE = AMBLUEO_UI_FORMULAIRE.save()
+        if AMBLUEO_UI_TACHE_ENREGISTREE.assignee_id != AMBLUEO_MAIL_ANCIEN_MEMBRE:
+            AMBLUEO_MAIL_LIEN = AMBLUEO_UI_REQUETE.build_absolute_uri(reverse(
+                "project", args=[AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID],
+            ))
+            envoyer_apres_validation(
+                "Une tâche vous a été attribuée",
+                f"La tâche « {AMBLUEO_UI_TACHE_ENREGISTREE.title} » du projet « {AMBLUEO_UI_PROJET.name} » "
+                f"vous a été attribuée.\n\n{AMBLUEO_MAIL_LIEN}",
+                AMBLUEO_UI_TACHE_ENREGISTREE.assignee.user.email,
+            )
         return redirect("project", AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID)
     return edit(AMBLUEO_UI_REQUETE, "Fiche tâche", AMBLUEO_UI_FORM, save)

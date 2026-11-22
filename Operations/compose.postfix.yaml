@@ -1,0 +1,17 @@
+services:
+  web:
+    environment:
+      AMBLUEO_INFRA_POSTFIX_HOTE: "1"
+      AMBLUEO_INFRA_HOTE_SMTP: 172.30.254.1
+      AMBLUEO_INFRA_PORT_SMTP: "2525"
+      AMBLUEO_INFRA_SMTP_STARTTLS: "0"
+      AMBLUEO_INFRA_UTILISATEUR_SMTP: ""
+      AMBLUEO_SECURITE_MOT_DE_PASSE_SMTP: ""
+    networks:
+      postfix:
+        ipv4_address: 172.30.254.2
+
+networks:
+  postfix:
+    external: true
+    name: amblueo-postfix

@@ -69,14 +69,15 @@ STATIC_ROOT = os.getenv("AMBLUEO_INFRA_STATIQUES", AMBLUEO_INFRA_RACINE / "stati
 MEDIA_ROOT = os.getenv("AMBLUEO_INFRA_JUSTIFICATIFS", AMBLUEO_INFRA_RACINE / "private")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = (
-    "django.core.mail.backends.console.EmailBackend" if DEBUG
+    "django.core.mail.backends.console.EmailBackend"
+    if DEBUG and os.getenv("AMBLUEO_INFRA_POSTFIX_HOTE") != "1"
     else "django.core.mail.backends.smtp.EmailBackend"
 )
 EMAIL_HOST = os.getenv("AMBLUEO_INFRA_HOTE_SMTP", "")
 EMAIL_PORT = int(os.getenv("AMBLUEO_INFRA_PORT_SMTP", "587"))
 EMAIL_HOST_USER = os.getenv("AMBLUEO_INFRA_UTILISATEUR_SMTP", "")
 EMAIL_HOST_PASSWORD = os.getenv("AMBLUEO_SECURITE_MOT_DE_PASSE_SMTP", "")
-EMAIL_USE_TLS = True
+EMAIL_USE_TLS = os.getenv("AMBLUEO_INFRA_SMTP_STARTTLS", "1") == "1"
 EMAIL_TIMEOUT = 10
 DEFAULT_FROM_EMAIL = os.getenv("AMBLUEO_INFRA_EXPEDITEUR", "robot@amblueo.example")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
