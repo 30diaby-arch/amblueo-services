@@ -1,0 +1,15 @@
+services:
+  proxy:
+    ports: !override
+      - "80:80"
+      - "443:443"
+    environment:
+      AMBLUEO_INFRA_DOMAINE: ${AMBLUEO_INFRA_DOMAINE:?domaine requis}
+    volumes: !override
+      - ./ops/nginx.prod.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/amblueo-acme:/var/www/acme:ro
+      - statiques:/data/static:ro
+  web:
+    environment:
+      AMBLUEO_INFRA_MODE: production

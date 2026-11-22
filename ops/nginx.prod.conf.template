@@ -1,0 +1,40 @@
+limit_req_zone $binary_remote_addr zone=auth:10m rate=10r/m;
+
+server {
+    listen 80;
+    access_log off;
+    server_name ${AMBLUEO_INFRA_DOMAINE};
+    server_tokens off;
+    location ^~ /.well-known/acme-challenge/ { root /var/www/acme; }
+    location / { return 301 https://${AMBLUEO_INFRA_DOMAINE}$request_uri; }
+}
+server {
+    listen 443 ssl;
+    server_name ${AMBLUEO_INFRA_DOMAINE};
+    ssl_certificate /etc/letsencrypt/live/${AMBLUEO_INFRA_DOMAINE}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${AMBLUEO_INFRA_DOMAINE}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    server_tokens off;
+    client_max_body_size 9m;
+    limit_req_status 429;
+    location ^~ /static/ { alias /data/static/; }
+    location ~ ^/(invitation/|mot-de-passe/) {
+        access_log off;
+        limit_req zone=auth burst=10 nodelay;
+        proxy_pass http://web:8000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+    location = /connexion/ {
+        access_log off;
+        limit_req zone=auth burst=10 nodelay;
+        proxy_pass http://web:8000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+    location / {
+        proxy_pass http://web:8000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

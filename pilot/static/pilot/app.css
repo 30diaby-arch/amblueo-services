@@ -1,0 +1,40 @@
+:root{--AMBLUEO_UI_PRIMAIRE:#244ec9;--AMBLUEO_UI_ENCRE:#172446;--AMBLUEO_UI_SECONDAIRE:#51617d;--AMBLUEO_UI_BORDURE:#dce4f2}
+*{box-sizing:border-box}
+body{margin:0;background:#f4f7fc;color:var(--AMBLUEO_UI_ENCRE);font:16px/1.55 system-ui,sans-serif}
+a{color:#2445b7;text-underline-offset:3px}
+.top{background:#fff;border-bottom:1px solid var(--AMBLUEO_UI_BORDURE)}
+.shell{width:min(1120px,calc(100% - 36px));margin:auto}
+.nav,.heading,.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.nav,.heading{justify-content:space-between}
+.nav{padding:13px 0}
+.brand{display:flex;align-items:center;gap:9px;color:var(--AMBLUEO_UI_ENCRE);text-decoration:none;font-weight:750}
+.mark{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--AMBLUEO_UI_PRIMAIRE);color:white}
+main{padding:28px 0 52px}
+h1,h2,h3{line-height:1.2;margin:0 0 12px}
+h1{font-size:clamp(1.6rem,4vw,2.2rem)}
+h2{font-size:1.25rem}
+h3{font-size:1rem;margin-top:14px}
+.heading{margin-bottom:12px}
+.heading h1,.heading h2,.heading p{margin-bottom:0}
+p{margin:8px 0 16px}
+.crumb{margin:0 0 14px}
+.panel{background:#fff;border:1px solid var(--AMBLUEO_UI_BORDURE);border-radius:13px;padding:20px;margin-bottom:16px}
+.narrow{max-width:580px;margin-inline:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(195px,100%),1fr));gap:12px}
+.tile{display:grid;gap:4px;text-decoration:none}
+.tile span,.metrics span,.helptext{color:var(--AMBLUEO_UI_SECONDAIRE)}
+.metrics > div{background:#f4f7ff;padding:12px;border-radius:9px;display:grid}
+.metrics strong{font-size:1.25rem}
+.button,button{display:inline-block;padding:8px 13px;background:var(--AMBLUEO_UI_PRIMAIRE);color:white;font:inherit;font-weight:650;border-radius:7px;border:1px solid transparent;text-decoration:none;cursor:pointer}
+.button.secondary,.quiet{background:#eef3fe;color:#2445b7}
+.inline{display:inline;margin-left:6px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;border-bottom:1px solid var(--AMBLUEO_UI_BORDURE);padding:9px 7px}
+th{font-size:.87rem;color:var(--AMBLUEO_UI_SECONDAIRE)}
+label{display:block;font-weight:650}
+input:not([type=hidden]),select,textarea{width:100%;padding:8px;border:1px solid #9eaeca;border-radius:6px;color:inherit;font:inherit}
+.helptext{display:block;font-size:.9rem}
+.alert,.errorlist{color:#9b2222}
+.clean{padding-left:0;list-style:none}
+.clean li{margin:6px 0}

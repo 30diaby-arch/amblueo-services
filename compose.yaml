@@ -1,0 +1,63 @@
+services:
+  proxy:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./ops/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
+      - statiques:/data/static:ro
+    depends_on:
+      web:
+        condition: service_healthy
+        restart: true
+    networks: [front]
+    logging: &rotation
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  web:
+    image: ${AMBLUEO_INFRA_IMAGE:-amblueo-services:0.1.0}
+    build: .
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      AMBLUEO_INFRA_HOTE_BASE: db
+      AMBLUEO_INFRA_STATIQUES: /data/static
+      AMBLUEO_INFRA_JUSTIFICATIFS: /data/private
+    volumes:
+      - statiques:/data/static
+      - justificatifs:/data/private
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import Request, urlopen; urlopen(Request('http://127.0.0.1:8000/health/', headers={'Host': __import__('os').environ['AMBLUEO_INFRA_HOTES'].split(',')[0]}), timeout=3).close()"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks: [front, data]
+    logging: *rotation
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AMBLUEO_INFRA_NOM_BASE_DONNEES:?base requise}
+      POSTGRES_USER: ${AMBLUEO_INFRA_UTILISATEUR_BASE:?utilisateur requis}
+      POSTGRES_PASSWORD: ${AMBLUEO_SECURITE_MOT_DE_PASSE_BASE:?mot de passe requis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks: [data]
+    logging: *rotation
+networks:
+  front:
+  data:
+    internal: true
+volumes:
+  postgres:
+  statiques:
+  justificatifs:

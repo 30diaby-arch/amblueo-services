@@ -1,0 +1,16 @@
+{% extends "pilot/base.html" %}{% block content %}
+<nav class="crumb"><a href="{% url 'project' member.company_id op.project_id %}">{{ op.project }}</a></nav>
+<section class="panel"><div class="heading"><div><h1>{{ op.title }}</h1><p>{{ op.get_kind_display }} · {{ op.category }} · {{ op.get_state_display }} · échéance {{ op.due }}</p></div><strong>{{ op.amount }} {{ member.company.currency }}</strong></div>
+{% if op.state == "approved" %}<div class="grid metrics">{% if op.kind == "expense" %}<div><span>Réalisé</span><strong>{{ balances.0 }}</strong></div>{% endif %}<div><span>Réglé</span><strong>{{ balances.1 }}</strong></div><div><span>Restant exigible</span><strong>{{ balances.2 }}</strong></div></div>{% endif %}
+{% if op.evidence %}<p><a href="{% url 'attachment' member.company_id op.pk %}">Télécharger le justificatif</a></p>{% endif %}
+<div class="actions">
+{% if op.state == "draft" and can_submit %}<a class="button" href="{% url 'change_state' member.company_id op.pk 'submit' %}">Soumettre</a>{% endif %}
+{% if can_finance and op.state == "submitted" %}<a class="button" href="{% url 'change_state' member.company_id op.pk 'approve' %}">Approuver</a><a class="button secondary" href="{% url 'change_state' member.company_id op.pk 'reject' %}">Rejeter</a>{% endif %}
+{% if can_finance and op.state == "approved" %}
+{% if op.kind == "expense" and balances.0 < op.amount %}<a class="button" href="{% url 'posting_new' member.company_id op.pk 'realization' %}">Enregistrer un coût réalisé</a>{% endif %}
+{% if balances.2 > 0 %}<a class="button" href="{% url 'posting_new' member.company_id op.pk 'payment' %}">Enregistrer un règlement</a>{% endif %}
+<a class="button secondary" href="{% url 'change_state' member.company_id op.pk 'cancel' %}">Annuler l’opération</a>{% endif %}</div></section>
+<section class="panel"><h2>Écritures</h2><table><thead><tr><th>Date</th><th>Type</th><th>Montant</th><th>Action</th></tr></thead><tbody>
+{% for item in postings %}<tr><td>{{ item.date }}</td><td>{{ item.get_kind_display }}</td><td>{{ item.amount }}</td><td>
+{% if item.void %}Annulée{% elif can_finance %}<a href="{% url 'posting_void' member.company_id op.pk item.pk %}">Corriger</a>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="4">Aucune écriture.</td></tr>{% endfor %}</tbody></table></section>{% endblock %}

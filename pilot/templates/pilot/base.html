@@ -1,0 +1,8 @@
+{% load static %}<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Amblueo Services{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'pilot/app.css' %}"></head>
+<body><header class="top"><div class="shell nav"><a class="brand" href="{% url 'home' %}"><span class="mark">A</span> Amblueo Services</a>
+{% if user.is_authenticated %}<form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="quiet" type="submit">Déconnexion</button></form>{% endif %}
+</div></header>
+<main class="shell">{% block content %}{% endblock %}</main></body></html>
