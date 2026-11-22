@@ -1,8 +1,33 @@
 {% load static %}<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Amblueo Services{% endblock %}</title>
-<link rel="stylesheet" href="{% static 'pilot/app.css' %}"></head>
-<body><header class="top"><div class="shell nav"><a class="brand" href="{% url 'home' %}"><span class="mark">A</span> Amblueo Services</a>
-{% if user.is_authenticated %}<form action="{% url 'logout' %}" method="post">{% csrf_token %}<button class="quiet" type="submit">Déconnexion</button></form>{% endif %}
-</div></header>
-<main class="shell">{% block content %}{% endblock %}</main></body></html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1805a4">
+    <title>{% block title %}Amblueo Services{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'pilot/app.css' %}">
+</head>
+<body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="top">
+        <div class="shell nav">
+            <a class="brand" href="{% url 'home' %}">
+                <img src="{% static 'marque/Design sans titre(3).png' %}" width="48" height="48" alt="">
+                <span>Amblueo <span class="brand-detail">Services</span></span>
+            </a>
+            {% if user.is_authenticated %}
+            <nav class="actions account-nav" aria-label="Navigation principale">
+                <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' %}aria-current="page"{% endif %}>Mes entreprises</a>
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button class="quiet" type="submit">Déconnexion</button>
+                </form>
+            </nav>
+            {% endif %}
+        </div>
+    </header>
+    <main id="contenu" class="shell" tabindex="-1">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

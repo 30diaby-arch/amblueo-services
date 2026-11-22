@@ -1,0 +1,62 @@
+<section class="panel priorities" aria-labelledby="priorites">
+    <h2 id="priorites">À traiter</h2>
+    <div class="priority-grid">
+        {% if can_finance %}
+        <div class="priority-card">
+            <h3>Dépenses à approuver <span class="count">{{ pending_expenses|length }}</span></h3>
+            <ul class="clean">
+                {% for item in pending_expenses|slice:":3" %}
+                <li><a href="{% url 'change_state' member.company_id item.pk 'approve' %}">{{ item.title }}</a>
+                    <small>{{ item.project }} · {{ item.amount }} {{ member.company.currency }} · {{ item.due }}</small></li>
+                {% empty %}<li class="empty">Aucune dépense en attente.</li>{% endfor %}
+            </ul>
+            {% if pending_expenses|length > 3 %}
+            <details><summary>Autres dépenses à approuver</summary><ul class="clean">
+                {% for item in pending_expenses|slice:"3:" %}
+                <li><a href="{% url 'change_state' member.company_id item.pk 'approve' %}">{{ item.title }}</a>
+                    <small>{{ item.project }} · {{ item.amount }} {{ member.company.currency }} · {{ item.due }}</small></li>
+                {% endfor %}
+            </ul></details>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if can_view_finance %}
+        <div class="priority-card">
+            <h3>Impayés échus <span class="count">{{ overdue|length }}</span></h3>
+            <ul class="clean">
+                {% for item, rest in overdue|slice:":3" %}
+                <li><a href="{% url 'operation' member.company_id item.pk %}">{{ item.title }}</a>
+                    <small>{{ item.get_kind_display }} · {{ rest }} {{ member.company.currency }} · {{ item.due }}</small></li>
+                {% empty %}<li class="empty">Aucun impayé échu.</li>{% endfor %}
+            </ul>
+            {% if overdue %}<a href="#impayes">Voir tous les impayés</a>{% endif %}
+        </div>
+        <div class="priority-card">
+            <h3>Projets à risque <span class="count">{{ risk_projects|length }}</span></h3>
+            <ul class="clean">
+                {% for item, stats in risk_projects|slice:":3" %}
+                <li><a href="{% url 'project' member.company_id item.pk %}#budget">{{ item.name }}</a>
+                    <small>{% if stats.available < 0 %}Budget dépassé{% else %}Risque de dépassement{% endif %}</small></li>
+                {% empty %}<li class="empty">Aucune alerte budgétaire.</li>{% endfor %}
+            </ul>
+            {% if risk_projects %}<a href="#budgets-par-projet">Voir les budgets</a>{% endif %}
+        </div>
+        {% endif %}
+        <div class="priority-card">
+            <h3>Tâches en retard <span class="count">{{ late|length }}</span></h3>
+            <ul class="clean">
+                {% for task in late|slice:":3" %}
+                <li>
+                    {% if can_manage or task.assignee_id == member.pk %}
+                    <a href="{% url 'task_edit' member.company_id task.project_id task.pk %}">{{ task.title }}</a>
+                    {% else %}
+                    <a href="{% url 'project' member.company_id task.project_id %}#tâches">{{ task.title }}</a>
+                    {% endif %}
+                    <small>{{ task.project }} · {{ task.end }}</small>
+                </li>
+                {% empty %}<li class="empty">Aucune tâche en retard.</li>{% endfor %}
+            </ul>
+            {% if late %}<a href="#retards">Voir toutes les tâches en retard</a>{% endif %}
+        </div>
+    </div>
+</section>

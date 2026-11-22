@@ -1,6 +1,6 @@
-{% extends "pilot/base.html" %}{% block content %}
+{% extends "pilot/base.html" %}{% block title %}Mes entreprises · Amblueo Services{% endblock %}{% block content %}
 <div class="heading"><h1>Mes entreprises</h1><a class="button" href="{% url 'company_new' %}">Créer une entreprise</a></div>
-<div class="grid">{% for item in memberships %}
+<div class="grid company-grid">{% for item in memberships %}
 <a class="panel tile" href="{% url 'company' item.company_id %}"><strong>{{ item.company.name }}</strong>
-<span>{{ item.get_role_display }} · {{ item.company.currency }}</span></a>
-{% empty %}<p>Créez une entreprise ou ouvrez votre lien d’invitation.</p>{% endfor %}</div>{% endblock %}
+<span>{{ item.get_role_display }} · {{ item.company.currency }}</span><span class="tile-arrow" aria-hidden="true">→</span></a>
+{% empty %}<div class="panel"><p class="empty">Créez une entreprise ou ouvrez votre lien d’invitation.</p></div>{% endfor %}</div>{% endblock %}

@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 COPY Backend/ /app/Backend/
 COPY Frontend/templates/ /app/Frontend/templates/
 COPY Frontend/static/ /app/Frontend/static/
+COPY Frontend/Logo/ /app/Frontend/Logo/
 WORKDIR /app/Backend
 USER 10001:10001
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--error-logfile", "-"]

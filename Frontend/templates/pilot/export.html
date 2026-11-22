@@ -1,3 +1,36 @@
-{% extends "pilot/base.html" %}{% block content %}<section class="panel narrow"><h1>Exporter le suivi</h1>
-<p>Les dates filtrent les échéances des opérations. Les lignes de budget présentent la situation courante des projets sélectionnés.</p>
-<form method="get">{{ form.as_p }}<button name="download" value="1">Télécharger le CSV</button></form></section>{% endblock %}
+{% extends "pilot/base.html" %}
+{% block title %}Exporter le suivi · Amblueo Services{% endblock %}
+{% block content %}
+<nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'company' member.company_id %}">{{ member.company }}</a></nav>
+<h1>Exporter le suivi</h1>
+<form method="get">
+    <section class="panel" aria-labelledby="filtres-export">
+        <div class="heading"><h2 id="filtres-export">Filtres</h2><span>{{ member.company.currency }}</span></div>
+        <div class="grid export-filters">{{ form.as_div }}</div>
+        <button class="quiet" type="submit">Actualiser l’aperçu</button>
+    </section>
+</form>
+{% if preview %}
+    <section class="panel" aria-labelledby="apercu-export">
+        <div class="heading">
+            <div>
+                <h2 id="apercu-export">Aperçu du CSV</h2>
+                <p>{{ filters.project|default_if_none:"Tous les projets" }} ·
+                    {% if filters.start and filters.end %}Du {{ filters.start }} au {{ filters.end }}
+                    {% elif filters.start %}À partir du {{ filters.start }}
+                    {% elif filters.end %}Jusqu’au {{ filters.end }}
+                    {% else %}Toutes les échéances{% endif %}</p>
+            </div>
+            <a class="button" href="{% querystring download=1 %}">Télécharger le CSV</a>
+        </div>
+        <div class="grid metrics">
+            <div><span>Opérations</span><strong>{{ preview.count }}</strong></div>
+            <div><span>Dépenses</span><strong>{{ preview.expenses }} {{ member.company.currency }}</strong></div>
+            <div><span>Recettes</span><strong>{{ preview.income }} {{ member.company.currency }}</strong></div>
+            <div><span>Budget approuvé courant</span><strong>{{ preview.approved_budget }} {{ member.company.currency }}</strong></div>
+        </div>
+        {% if not preview.count %}<p class="empty">Aucune opération pour ces filtres.</p>{% endif %}
+        <p class="helptext">Les totaux des opérations additionnent les montants saisis, tous états confondus. Les dates filtrent les échéances. Les lignes de budget présentent la situation actuelle des projets sélectionnés.</p>
+    </section>
+{% endif %}
+{% endblock %}

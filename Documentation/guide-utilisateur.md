@@ -1,6 +1,9 @@
 # Guide utilisateur
 
-1. **Dirigeant** — Connectez-vous et ouvrez ou créez une entreprise. Dans
+1. **Dirigeant** — Connectez-vous et ouvrez ou créez une entreprise. « Premiers
+   pas » indique les étapes encore ouvertes : projet, budget approuvé et solde
+   d’ouverture. Le bloc « À traiter » donne accès aux dépenses à approuver,
+   impayés échus, alertes budgétaires et tâches en retard selon votre rôle. Dans
    Équipe, choisissez « Inviter un membre », sélectionnez un rôle, puis
    transmettez le lien à la personne concernée. Le lien expire en 48 heures.
    Une personne déjà inscrite se connecte avant d'accepter. « Désactiver »
@@ -15,8 +18,11 @@
    règlement. Pour une recette, saisissez le montant attendu, soumettez-la,
    approuvez-la et enregistrez l'encaissement.
 5. **Trésorerie et export** — Initialisez une fois le solde d'ouverture.
-   Consultez la projection et les impayés sur le tableau de bord. Pour
-   rapprocher les chiffres, sélectionnez un projet et une période dans le CSV.
+   Consultez la projection et les impayés sur le tableau de bord. Ouvrez
+   « Préparer un export », sélectionnez un projet et une période, puis cliquez
+   sur « Actualiser l’aperçu ». Vérifiez les montants et la devise avant de
+   télécharger le CSV. La période filtre les échéances des opérations. Le
+   budget approuvé reste celui de la situation courante.
 6. **Correction** — Depuis la fiche opération, sélectionnez « Corriger » sur
    l'écriture, indiquez le motif et enregistrez l'écriture exacte au besoin.
    L'historique récent est visible sur la page de l'entreprise.

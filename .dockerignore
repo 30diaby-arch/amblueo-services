@@ -7,8 +7,10 @@
 !Backend/pilot/
 !Backend/pilot/**
 !Frontend/
+!Frontend/Logo/
+!Frontend/Logo/**
 !Frontend/static/
-!Frontend/static/**
+!Frontend/Logo/
 !Frontend/templates/
 !Frontend/templates/**
 **/__pycache__/

@@ -79,4 +79,14 @@ class ReasonForm(forms.Form):
 class ExportForm(forms.Form):
     start = forms.DateField(label="Du", required=False)
     end = forms.DateField(label="Au", required=False)
-    project = forms.ModelChoiceField(label="Projet", queryset=Project.objects.none(), required=False)
+    project = forms.ModelChoiceField(
+        label="Projet", queryset=Project.objects.none(), required=False, empty_label="Tous les projets",
+    )
+
+    def clean(self):
+        AMBLUEO_EXPORT_DONNEES = super().clean()
+        AMBLUEO_EXPORT_DEBUT = AMBLUEO_EXPORT_DONNEES.get("start")
+        AMBLUEO_EXPORT_FIN = AMBLUEO_EXPORT_DONNEES.get("end")
+        if AMBLUEO_EXPORT_DEBUT and AMBLUEO_EXPORT_FIN and AMBLUEO_EXPORT_DEBUT > AMBLUEO_EXPORT_FIN:
+            self.add_error("end", "La date de fin doit suivre la date de début.")
+        return AMBLUEO_EXPORT_DONNEES

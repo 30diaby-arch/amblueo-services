@@ -4,6 +4,7 @@ import re
 import tempfile
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 from decimal import Decimal
 from threading import Barrier
 
@@ -135,6 +136,82 @@ class PilotTest(TestCase):
             {"reason": "Saisie en doublon constatée"}).status_code, 302)
         self.assertTrue(Audit.objects.filter(reason="Saisie en doublon constatée").exists())
         self.assertEqual(finance.cash_summary(self.AMBLUEO_TEST_A)["current"], 500000)
+
+
+    def test_company_priorities_and_setup_respect_roles(self):
+        AMBLUEO_TEST_COMPANY_ARGS = [self.AMBLUEO_TEST_A.pk]
+        AMBLUEO_TEST_URL = reverse("company", args=AMBLUEO_TEST_COMPANY_ARGS)
+        self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
+        self.assertContains(self.client.get(AMBLUEO_TEST_URL), reverse("project_new", args=AMBLUEO_TEST_COMPANY_ARGS))
+        AMBLUEO_TEST_PROJET = self.project(self.AMBLUEO_TEST_MANAGER, "Pilotage")
+        AMBLUEO_TEST_PRIVE = self.project(self.AMBLUEO_TEST_OTHER, "Projet privé")
+        AMBLUEO_TEST_HIER = timezone.localdate() - timedelta(days=1)
+        for AMBLUEO_TEST_PROJET_CIBLE in (AMBLUEO_TEST_PROJET, AMBLUEO_TEST_PRIVE):
+            Operation.objects.create(
+                project=AMBLUEO_TEST_PROJET_CIBLE, author=AMBLUEO_TEST_PROJET_CIBLE.owner, kind="expense",
+                state="submitted", amount=100, title=f"Dépense {AMBLUEO_TEST_PROJET_CIBLE.name}", due=AMBLUEO_TEST_HIER,
+            )
+        Operation.objects.create(
+            project=AMBLUEO_TEST_PROJET, author=self.AMBLUEO_TEST_FIN, kind="income",
+            state="approved", amount=40, title="Recette en retard", due=AMBLUEO_TEST_HIER,
+        )
+        AMBLUEO_TEST_TACHE = Task.objects.create(
+            project=AMBLUEO_TEST_PROJET, assignee=self.AMBLUEO_TEST_MEMBER,
+            title="Tâche échue", start=AMBLUEO_TEST_HIER, end=AMBLUEO_TEST_HIER, estimated=1,
+        )
+        AMBLUEO_TEST_ECRAN = self.client.get(AMBLUEO_TEST_URL)
+        self.assertContains(AMBLUEO_TEST_ECRAN, "Dépense Pilotage")
+        self.assertContains(AMBLUEO_TEST_ECRAN, "Recette en retard")
+        self.assertContains(AMBLUEO_TEST_ECRAN, "Risque de dépassement")
+        self.assertNotContains(AMBLUEO_TEST_ECRAN, "Projet privé")
+        self.assertTrue(AMBLUEO_TEST_ECRAN.context["setup"]["project"])
+        Budget.objects.create(project=AMBLUEO_TEST_PROJET, amount=200, approved=True)
+        self.client.post(reverse("opening", args=AMBLUEO_TEST_COMPANY_ARGS), {"amount": 0, "date": self.AMBLUEO_TEST_DATE})
+        self.assertNotContains(self.client.get(AMBLUEO_TEST_URL), "Premiers pas")
+
+        self.client.force_login(self.AMBLUEO_TEST_MANAGER.user)
+        AMBLUEO_TEST_ECRAN = self.client.get(AMBLUEO_TEST_URL)
+        self.assertNotContains(AMBLUEO_TEST_ECRAN, "Dépense Pilotage")
+        self.assertContains(AMBLUEO_TEST_ECRAN, "Recette en retard")
+
+        self.client.force_login(self.AMBLUEO_TEST_MEMBER.user)
+        AMBLUEO_TEST_ECRAN = self.client.get(AMBLUEO_TEST_URL)
+        self.assertNotContains(AMBLUEO_TEST_ECRAN, "Recette en retard")
+        self.assertNotContains(AMBLUEO_TEST_ECRAN, "Projets à risque")
+        self.assertContains(AMBLUEO_TEST_ECRAN, reverse("task_edit", args=[
+            *AMBLUEO_TEST_COMPANY_ARGS, AMBLUEO_TEST_PROJET.pk, AMBLUEO_TEST_TACHE.pk,
+        ]))
+
+    def test_export_preview_matches_download_and_rejects_invalid_filters(self):
+        AMBLUEO_TEST_PROJET = self.project(self.AMBLUEO_TEST_MANAGER, "Export")
+        AMBLUEO_TEST_AUTRE = self.project(self.AMBLUEO_TEST_OTHER, "Export privé")
+        Budget.objects.create(project=AMBLUEO_TEST_PROJET, approved=True, amount=400)
+        for AMBLUEO_TEST_KIND, AMBLUEO_TEST_AMOUNT, AMBLUEO_TEST_DUE in [
+            ("expense", 150, self.AMBLUEO_TEST_DATE),
+            ("income", 50, self.AMBLUEO_TEST_DATE),
+            ("expense", 80, timezone.localdate() - timedelta(days=1)),
+        ]:
+            Operation.objects.create(
+                project=AMBLUEO_TEST_PROJET, author=self.AMBLUEO_TEST_MANAGER,
+                kind=AMBLUEO_TEST_KIND, amount=AMBLUEO_TEST_AMOUNT, due=AMBLUEO_TEST_DUE, title="Opération",
+            )
+        AMBLUEO_TEST_URL = reverse("export", args=[self.AMBLUEO_TEST_A.pk])
+        self.client.force_login(self.AMBLUEO_TEST_FIN.user)
+        AMBLUEO_TEST_FILTRES = dict(project=AMBLUEO_TEST_PROJET.pk, start=self.AMBLUEO_TEST_DATE, end=self.AMBLUEO_TEST_DATE)
+        AMBLUEO_TEST_APERCU = self.client.get(AMBLUEO_TEST_URL, AMBLUEO_TEST_FILTRES)
+        self.assertDictEqual(AMBLUEO_TEST_APERCU.context["preview"], dict(
+            count=2, expenses=Decimal(150), income=Decimal(50), approved_budget=Decimal(400),
+        ))
+        self.assertContains(AMBLUEO_TEST_APERCU, "Aperçu du CSV")
+        AMBLUEO_TEST_CSV = self.client.get(AMBLUEO_TEST_URL, {**AMBLUEO_TEST_FILTRES, "download": 1})
+        AMBLUEO_TEST_LIGNES = list(csv.DictReader(io.StringIO(AMBLUEO_TEST_CSV.content.decode("utf-8-sig")), delimiter=";"))
+        self.assertEqual([Decimal(AMBLUEO_TEST_LIGNE["Montant"]) for AMBLUEO_TEST_LIGNE in AMBLUEO_TEST_LIGNES],
+                         [Decimal(400), Decimal(150), Decimal(50)])
+        self.assertNotContains(self.client.get(AMBLUEO_TEST_URL, {"project": AMBLUEO_TEST_AUTRE.pk}), "Aperçu du CSV")
+        self.assertContains(self.client.get(AMBLUEO_TEST_URL, dict(start=self.AMBLUEO_TEST_DATE, end="2000-01-01")),
+                            "La date de fin doit suivre la date de début.")
+        self.client.force_login(self.AMBLUEO_TEST_MEMBER.user)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_URL).status_code, 403)
 
 
 @skipUnless(connection.vendor == "postgresql", "Verrous PostgreSQL requis")

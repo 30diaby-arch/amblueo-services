@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
-from pilot.models import Company, Membership, Project, Role, Task, User
+from pilot.models import Budget, Company, Membership, Operation, Project, Role, Task, User
 
 
 class Command(BaseCommand):
@@ -34,10 +34,23 @@ class Command(BaseCommand):
         AMBLUEO_DEMO_DATE = timezone.localdate()
         AMBLUEO_DEMO_PROJET = Project.objects.create(company=AMBLUEO_DEMO_COMPAGNIE, name="Refonte du site client",
             owner=Membership.objects.get(company=AMBLUEO_DEMO_COMPAGNIE, role=Role.MANAGER),
-            status="active", start=AMBLUEO_DEMO_DATE, end=AMBLUEO_DEMO_DATE + timedelta(days=15))
+            status="active", start=AMBLUEO_DEMO_DATE - timedelta(days=5), end=AMBLUEO_DEMO_DATE + timedelta(days=15))
         Task.objects.create(project=AMBLUEO_DEMO_PROJET, title="Valider les maquettes",
             assignee=Membership.objects.get(company=AMBLUEO_DEMO_COMPAGNIE, role=Role.MEMBER),
-            start=AMBLUEO_DEMO_DATE, end=AMBLUEO_DEMO_DATE + timedelta(days=3), estimated=8)
+            start=AMBLUEO_DEMO_DATE - timedelta(days=3), end=AMBLUEO_DEMO_DATE - timedelta(days=1), estimated=8)
+        Budget.objects.create(project=AMBLUEO_DEMO_PROJET, amount=200000, approved=True)
+        Operation.objects.create(
+            project=AMBLUEO_DEMO_PROJET, author=AMBLUEO_DEMO_PROJET.owner,
+            title="Prestation d’intégration", category="Sous-traitance", amount=230000,
+            kind=Operation.Kind.EXPENSE, state=Operation.State.SUBMITTED,
+            due=AMBLUEO_DEMO_DATE + timedelta(days=3),
+        )
+        Operation.objects.create(
+            project=AMBLUEO_DEMO_PROJET, author=Membership.objects.get(company=AMBLUEO_DEMO_COMPAGNIE, role=Role.FINANCE),
+            title="Acompte client attendu", category="Prestation", amount=125000,
+            kind=Operation.Kind.INCOME, state=Operation.State.APPROVED,
+            due=AMBLUEO_DEMO_DATE - timedelta(days=2),
+        )
         Project.objects.create(company=AMBLUEO_DEMO_AUTRE, name="Identité visuelle",
             owner=Membership.objects.get(company=AMBLUEO_DEMO_AUTRE, role=Role.OWNER),
             start=AMBLUEO_DEMO_DATE, end=AMBLUEO_DEMO_DATE + timedelta(days=10))
