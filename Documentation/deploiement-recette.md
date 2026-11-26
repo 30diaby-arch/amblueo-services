@@ -98,3 +98,79 @@ AMBLUEO_INFRA_CIBLE=recette /chemin/du/depot/Operations/compose.sh exec -T proxy
 ```
 
 Voir le [guide d’exploitation](exploitation.md) pour les sauvegardes, la restauration isolée et le retour arrière.
+
+## Valider et déployer avec GitHub Actions
+
+Le workflow **Validation et déploiement de recette** vérifie le code à chaque
+push et pull request. Il construit l’image, exécute les vérifications Django sur
+PostgreSQL et teste la navigation ainsi que le modèle de notification dans Chromium aux
+formats bureau et mobile.
+Une capture d’écran est jointe au run si une assertion du parcours échoue dans
+le navigateur. Le script utilise un projet Compose temporaire et les réglages
+de démonstration de `Operations/.env.example`.
+
+Depuis un poste équipé de Docker, lancer `./Operations/verifier.sh`. Pour inclure
+le parcours navigateur, préparer un environnement Python local et lancer :
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install playwright==1.65.1
+.venv/bin/python -m playwright install --with-deps chromium
+AMBLUEO_TEST_PYTHON="$PWD/.venv/bin/python" ./Operations/verifier.sh --affichage
+```
+
+### Préparer l’accès SSH
+
+- Sur `infra01`, utiliser un compte de déploiement dédié. Ce compte doit pouvoir
+  lire et mettre à jour le dépôt de recette, utiliser Docker et récupérer
+  `origin/main` sans invite. Configurer pour cette récupération une clé de
+  déploiement GitHub en lecture seule.
+- Après la fusion du workflow dans `main`, préparer le dépôt du serveur sur
+  `main` avec `Operations/deployer-recette.sh` présent. Conserver le
+  `Operations/.env` existant, le projet Compose, les volumes et le réseau
+  Postfix. La mise à jour du checkout à cette étape ne relance aucun service.
+- Créer une **seconde paire de clés**, dédiée au lien Actions vers `infra01`.
+  Sur `infra01`, ajouter sa clé publique à `~/.ssh/authorized_keys` du compte de
+  déploiement. Remplacer le chemin et la clé dans cet exemple. La commande
+  forcée lit le SHA à déployer sur son entrée standard.
+
+```text
+restrict,command="/chemin/absolu/amblueo-services/Operations/deployer-recette.sh" ssh-ed25519 AAAA... github-actions-recette
+```
+
+Dans GitHub, ouvrir **Settings → Environments → New environment**, nommer
+l’environnement `recette` et limiter ses déploiements à la branche `main`.
+Configurer les paramètres suivants dans cet environnement.
+
+| Type | Nom | Valeur |
+| --- | --- | --- |
+| Secret | `RECETTE_SSH_PRIVATE_KEY` | Clé privée dédiée au lien Actions vers `infra01` |
+| Variable | `RECETTE_SSH_TARGET` | Compte et nom d’hôte SSH, par exemple `deploiement@infra01.amblueo.com` |
+| Variable | `RECETTE_SSH_KNOWN_HOSTS` | Ligne `known_hosts` avec le nom d’hôte et la clé publique de l’hôte, vérifiée sur `infra01` |
+
+Pour préparer la dernière valeur avec une clé d’hôte Ed25519, lire la clé sur
+le serveur via une session déjà vérifiée :
+
+```bash
+sudo awk '{print "infra01.amblueo.com", $1, $2}' /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+La clé utilisée sur le poste pour les pushes Git reste sur le poste. Garder
+`Operations/.env` et les clés privées hors de Git.
+
+### Lancer le déploiement
+
+1. Vérifier les checks de la pull request et fusionner dans `main`.
+2. Vérifier qu’une sauvegarde récente est disponible et réserver la fenêtre
+   d’interruption.
+3. Ouvrir **Actions → Validation et déploiement de recette → Run workflow**,
+   choisir `main` et lancer le workflow.
+4. Ouvrir le job **Déployer sur infra01**. Il démarre après la validation du
+   même commit et affiche le SHA déployé, l’état Compose et le résultat du
+   contrôle HTTPS. Un verrou empêche deux mises à jour simultanées du
+   checkout de recette.
+
+En cas d’échec après l’arrêt de `web` et du proxy, consulter l’étape en erreur et
+les logs sur `infra01`. Corriger la cause avant de relancer le déploiement. Pour
+les changements de messagerie, confirmer aussi la réception réelle d’une
+notification dans une boîte de recette.

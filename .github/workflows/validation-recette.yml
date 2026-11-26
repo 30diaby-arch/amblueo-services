@@ -1,0 +1,65 @@
+name: Validation et déploiement de recette
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    name: Django, PostgreSQL et affichage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer Playwright
+        run: |
+          python3 -m venv "$RUNNER_TEMP/amblueo-playwright"
+          "$RUNNER_TEMP/amblueo-playwright/bin/python" -m pip install playwright==1.65.1
+          "$RUNNER_TEMP/amblueo-playwright/bin/python" -m playwright install --with-deps chromium
+      - name: Valider
+        run: AMBLUEO_TEST_PYTHON="$RUNNER_TEMP/amblueo-playwright/bin/python" ./Operations/verifier.sh --affichage
+      - name: Joindre la capture en cas d’échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: affichage-en-echec
+          path: /tmp/amblueo-affichage-*/echec.png
+          if-no-files-found: ignore
+
+  recette:
+    name: Déployer sur infra01
+    needs: validation
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: recette
+    concurrency:
+      group: amblueo-recette
+      cancel-in-progress: false
+    steps:
+      - name: Déployer le commit validé
+        env:
+          AMBLUEO_INFRA_SSH_CLE: ${{ secrets.RECETTE_SSH_PRIVATE_KEY }}
+          AMBLUEO_INFRA_SSH_HOTE_CONNU: ${{ vars.RECETTE_SSH_KNOWN_HOSTS }}
+          AMBLUEO_INFRA_SSH_CIBLE: ${{ vars.RECETTE_SSH_TARGET }}
+        run: |
+          set -euo pipefail
+          : "${AMBLUEO_INFRA_SSH_CLE:?Secret RECETTE_SSH_PRIVATE_KEY manquant}"
+          : "${AMBLUEO_INFRA_SSH_HOTE_CONNU:?Variable RECETTE_SSH_KNOWN_HOSTS manquante}"
+          : "${AMBLUEO_INFRA_SSH_CIBLE:?Variable RECETTE_SSH_TARGET manquante}"
+          umask 077
+          AMBLUEO_INFRA_SSH_DIR=$(mktemp -d)
+          trap 'rm -rf -- "$AMBLUEO_INFRA_SSH_DIR"' EXIT
+          printf '%s\n' "$AMBLUEO_INFRA_SSH_CLE" > "$AMBLUEO_INFRA_SSH_DIR/id"
+          printf '%s\n' "$AMBLUEO_INFRA_SSH_HOTE_CONNU" > "$AMBLUEO_INFRA_SSH_DIR/known_hosts"
+          unset AMBLUEO_INFRA_SSH_CLE
+          printf '%s\n' "$GITHUB_SHA" | ssh -T -i "$AMBLUEO_INFRA_SSH_DIR/id" \
+            -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o "UserKnownHostsFile=$AMBLUEO_INFRA_SSH_DIR/known_hosts" \
+            -o ConnectTimeout=15 -- "$AMBLUEO_INFRA_SSH_CIBLE"
+      - name: Vérifier la réponse HTTPS
+        run: test "$(curl -fsS --retry 3 --max-time 10 https://services.amblueo.com/health/)" = ok

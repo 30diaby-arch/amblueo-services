@@ -3,7 +3,7 @@ services:
     image: nginx:1.28-alpine
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:80"
+      - "127.0.0.1:${AMBLUEO_INFRA_PORT_PROXY-8080}:80"
     volumes:
       - ./Operations/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
       - statiques:/data/static:ro
@@ -21,7 +21,8 @@ services:
       context: .
       dockerfile: Operations/Dockerfile
     restart: unless-stopped
-    env_file: [Operations/.env]
+    env_file:
+      - "${AMBLUEO_INFRA_FICHIER_ENV:-Operations/.env}"
     environment:
       AMBLUEO_INFRA_HOTE_BASE: db
       AMBLUEO_INFRA_STATIQUES: /data/static
