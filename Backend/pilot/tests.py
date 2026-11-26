@@ -67,6 +67,44 @@ class PilotTest(TestCase):
         self.assertEqual(len(mail.outbox), 2)
         self.assertIn("/mot-de-passe/", mail.outbox[1].body)
 
+    def test_account_security_notifications(self):
+        AMBLUEO_TEST_USER = self.AMBLUEO_TEST_OWNER.user
+        AMBLUEO_TEST_LOGIN = reverse("login")
+        AMBLUEO_TEST_PASSWORD = "Mot-de-passe-test-55"
+        AMBLUEO_TEST_NEW_PASSWORD = "Nouvelle-phrase-de-passe-2026!"
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(AMBLUEO_TEST_LOGIN, {"username": AMBLUEO_TEST_USER.username, "password": "incorrect"})
+        self.assertEqual(len(mail.outbox), 0)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.client.post(AMBLUEO_TEST_LOGIN, {
+                "username": AMBLUEO_TEST_USER.username, "password": AMBLUEO_TEST_PASSWORD,
+            }).status_code, 302)
+        self.assertEqual(mail.outbox[0].to, [AMBLUEO_TEST_USER.email])
+        self.assertIn("Nouvelle connexion", mail.outbox[0].subject)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.client.post(reverse("password_change"), {
+                "old_password": AMBLUEO_TEST_PASSWORD,
+                "new_password1": AMBLUEO_TEST_NEW_PASSWORD, "new_password2": AMBLUEO_TEST_NEW_PASSWORD,
+            }).status_code, 302)
+        self.assertIn("a changé", mail.outbox[1].subject)
+        self.assertNotIn(AMBLUEO_TEST_NEW_PASSWORD, mail.outbox[1].body)
+        self.assertEqual(self.client.get(reverse("password_change")).status_code, 200)
+
+        self.client.logout()
+        self.client.post(reverse("password_reset"), {"email": AMBLUEO_TEST_USER.email})
+        AMBLUEO_TEST_LINK = re.search(r"http://testserver/mot-de-passe/[^\s]+", mail.outbox[2].body).group()
+        self.assertIn(AMBLUEO_TEST_LINK, mail.outbox[2].alternatives[0].content)
+        AMBLUEO_TEST_CONFIRM = self.client.get(AMBLUEO_TEST_LINK).url
+        with self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.client.post(AMBLUEO_TEST_CONFIRM, {
+                "new_password1": AMBLUEO_TEST_PASSWORD, "new_password2": AMBLUEO_TEST_PASSWORD,
+            }).status_code, 302)
+        self.assertIn("a changé", mail.outbox[3].subject)
+        for AMBLUEO_TEST_MESSAGE in mail.outbox:
+            AMBLUEO_TEST_HTML = AMBLUEO_TEST_MESSAGE.alternatives[0]
+            self.assertEqual(AMBLUEO_TEST_HTML.mimetype, "text/html")
+            self.assertIn("http://testserver/static/marque/", AMBLUEO_TEST_HTML.content)
+
     def test_projects_tasks_and_access(self):
         self.client.force_login(self.AMBLUEO_TEST_MANAGER.user)
         AMBLUEO_TEST_A = self.AMBLUEO_TEST_A.pk
@@ -107,6 +145,8 @@ class PilotTest(TestCase):
             self.assertEqual(self.client.post(AMBLUEO_TEST_TACHE_URL, AMBLUEO_TEST_TACHE_DATA).status_code, 302)
         self.assertEqual(len(mail.outbox), 3)
         self.assertEqual(mail.outbox[-1].to, [self.AMBLUEO_TEST_MANAGER.user.email])
+        self.assertIn("Voir la tâche dans le projet", mail.outbox[-1].alternatives[0].content)
+        self.assertIn("Échéance".lower(), mail.outbox[-1].body)
 
     def test_full_financial_recipe(self):
         AMBLUEO_TEST_PROJET = self.project(self.AMBLUEO_TEST_MANAGER, "Infrastructure")

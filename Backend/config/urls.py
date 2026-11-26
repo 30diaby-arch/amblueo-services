@@ -1,16 +1,20 @@
 from django.contrib.auth import views as auth
 from django.urls import path
 
-from pilot.views import companies, exports, financial, projects, system
+from pilot.views import accounts, companies, exports, financial, projects, system
 
 urlpatterns = [
     path("health/", system.health, name="health"),
     path("", companies.home, name="home"),
-    path("connexion/", auth.LoginView.as_view(), name="login"),
+    path("connexion/", accounts.LoginView.as_view(), name="login"),
     path("deconnexion/", auth.LogoutView.as_view(), name="logout"),
-    path("mot-de-passe/", auth.PasswordResetView.as_view(), name="password_reset"),
+    path("compte/mot-de-passe/", accounts.PasswordChangeView.as_view(), name="password_change"),
+    path("compte/mot-de-passe/modifie/", auth.PasswordChangeDoneView.as_view(), name="password_change_done"),
+    path("mot-de-passe/", auth.PasswordResetView.as_view(
+        html_email_template_name="registration/password_reset_email_html.html",
+    ), name="password_reset"),
     path("mot-de-passe/envoye/", auth.PasswordResetDoneView.as_view(), name="password_reset_done"),
-    path("mot-de-passe/<uidb64>/<token>/", auth.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
+    path("mot-de-passe/<uidb64>/<token>/", accounts.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
     path("mot-de-passe/termine/", auth.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
     path("e/nouvelle/", companies.company_new, name="company_new"),
     path("invitation/<str:AMBLUEO_SECURITE_JETON>/", companies.accept, name="accept"),

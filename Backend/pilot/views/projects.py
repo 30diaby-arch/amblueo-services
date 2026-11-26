@@ -30,9 +30,12 @@ def project_edit(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_
         if AMBLUEO_UI_PROJET_ENREGISTRE.owner_id != AMBLUEO_MAIL_ANCIEN_RESPONSABLE:
             AMBLUEO_MAIL_LIEN = AMBLUEO_UI_REQUETE.build_absolute_uri(AMBLUEO_UI_REPONSE.url)
             envoyer_apres_validation(
+                AMBLUEO_UI_REQUETE,
                 "Un projet vous a été confié",
-                f"Vous êtes responsable du projet « {AMBLUEO_UI_PROJET_ENREGISTRE.name} ».\n\n{AMBLUEO_MAIL_LIEN}",
+                f"Bonjour,\n\nVous êtes désormais responsable du projet « {AMBLUEO_UI_PROJET_ENREGISTRE.name} ».\n\n"
+                "Ouvrez le projet pour consulter son échéance et les tâches associées.",
                 AMBLUEO_UI_PROJET_ENREGISTRE.owner.user.email,
+                AMBLUEO_MAIL_LIEN=AMBLUEO_MAIL_LIEN, AMBLUEO_MAIL_ACTION="Ouvrir le projet",
             )
         return AMBLUEO_UI_REPONSE
     return edit(AMBLUEO_UI_REQUETE, "Fiche projet", AMBLUEO_UI_FORM, save)
@@ -81,10 +84,13 @@ def task_edit(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID,
                 "project", args=[AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID],
             ))
             envoyer_apres_validation(
+                AMBLUEO_UI_REQUETE,
                 "Une tâche vous a été attribuée",
-                f"La tâche « {AMBLUEO_UI_TACHE_ENREGISTREE.title} » du projet « {AMBLUEO_UI_PROJET.name} » "
-                f"vous a été attribuée.\n\n{AMBLUEO_MAIL_LIEN}",
+                f"Bonjour,\n\nLa tâche « {AMBLUEO_UI_TACHE_ENREGISTREE.title} » du projet « {AMBLUEO_UI_PROJET.name} » "
+                f"vous a été attribuée. Son échéance est le {AMBLUEO_UI_TACHE_ENREGISTREE.end:%d/%m/%Y}.\n\n"
+                "Ouvrez le projet pour consulter la tâche et mettre à jour son avancement.",
                 AMBLUEO_UI_TACHE_ENREGISTREE.assignee.user.email,
+                AMBLUEO_MAIL_LIEN=AMBLUEO_MAIL_LIEN, AMBLUEO_MAIL_ACTION="Voir la tâche dans le projet",
             )
         return redirect("project", AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID)
     return edit(AMBLUEO_UI_REQUETE, "Fiche tâche", AMBLUEO_UI_FORM, save)

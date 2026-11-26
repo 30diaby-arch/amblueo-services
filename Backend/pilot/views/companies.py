@@ -116,11 +116,14 @@ def invite(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
         AMBLUEO_UI_INVITATION.save()
         AMBLUEO_MAIL_LIEN = AMBLUEO_UI_REQUETE.build_absolute_uri(reverse("accept", args=[AMBLUEO_SECURITE_JETON]))
         envoyer_apres_validation(
+            AMBLUEO_UI_REQUETE,
             "Votre invitation à Amblueo Services",
-            f"Vous avez été invité à rejoindre {AMBLUEO_UI_MEMBRE.company.name} sur Amblueo Services.\n\n"
-            f"Pour accepter l’invitation ou créer votre compte :\n{AMBLUEO_MAIL_LIEN}\n\n"
-            "Ce lien est valable 48 heures et utilisable une seule fois.",
+            f"Bonjour,\n\nVous avez été invité à rejoindre {AMBLUEO_UI_MEMBRE.company.name} sur Amblueo Services. "
+            "Ouvrez le lien pour accepter l’invitation et créer votre compte si nécessaire.\n\n"
+            "Ce lien personnel est valable 48 heures et utilisable une seule fois. "
+            "Si vous n’attendiez pas cette invitation, vous pouvez ignorer ce message.",
             AMBLUEO_UI_INVITATION.email,
+            AMBLUEO_MAIL_LIEN=AMBLUEO_MAIL_LIEN, AMBLUEO_MAIL_ACTION="Accepter l’invitation",
         )
         return render(AMBLUEO_UI_REQUETE, "pilot/link.html", {"link": AMBLUEO_MAIL_LIEN})
     return edit(AMBLUEO_UI_REQUETE, "Inviter un membre", forms.InvitationForm(form_data(AMBLUEO_UI_REQUETE)), save)
