@@ -300,6 +300,12 @@ class PilotTest(TestCase):
         self.assertEqual(AMBLUEO_TEST_PAGE.context["totals"], {"income": Decimal("200"), "expense": Decimal("50")})
         self.assertEqual(AMBLUEO_TEST_PAGE.context["cash"]["current"], Decimal("250"))
         self.assertEqual(AMBLUEO_TEST_PAGE.context["projects"][0].tasks_done, 1)
+        AMBLUEO_TEST_TRANCHES = AMBLUEO_TEST_PAGE.context["deadlines"]
+        self.assertEqual(AMBLUEO_TEST_TRANCHES[0]["income"], Decimal("270"))
+        self.assertEqual(AMBLUEO_TEST_TRANCHES[1]["expense"], Decimal("50"))
+        self.assertEqual(AMBLUEO_TEST_PAGE.context["chart_data"]["budgets"], [
+            {"label": "Projet de pilotage", "amount": Decimal("1000")},
+        ])
         self.assertEqual(self.client.get(AMBLUEO_TEST_URL).context["totals"]["income"], Decimal("230"))
         self.client.force_login(self.AMBLUEO_TEST_FIN.user)
         self.assertEqual(self.client.get(AMBLUEO_TEST_URL).status_code, 200)

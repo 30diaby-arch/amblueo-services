@@ -79,3 +79,10 @@ Terminer une tâche et vérifier l’avancement du projet. Créer un dépassemen
 budgétaire ou une créance échue, puis suivre le lien de l’alerte pour retrouver
 sa source. Vérifier le rendu sur ordinateur et mobile, l’affichage sans données
 et l’accès refusé depuis un compte d’une autre entreprise.
+
+
+Pour les graphiques interactifs, survoler un point de la courbe de flux et
+comparer son montant avec **Voir les montants par période**. Vérifier que
+l’anneau correspond aux budgets approuvés. Dans **Échéances à traiter**,
+ouvrir un montant à payer ou à encaisser et vérifier que l’échéancier conserve
+le type et l’horizon sélectionnés.

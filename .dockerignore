@@ -7,6 +7,10 @@
 !Backend/pilot/
 !Backend/pilot/**
 !Frontend/
+!Frontend/package.json
+!Frontend/package-lock.json
+!Frontend/charts/
+!Frontend/charts/**
 !Frontend/Logo/
 !Frontend/Logo/**
 !Frontend/static/
@@ -15,3 +19,5 @@
 !Frontend/templates/**
 **/__pycache__/
 **/*.pyc
+
+Frontend/static/pilot/dashboard.bundle.js*

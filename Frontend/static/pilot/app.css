@@ -376,3 +376,10 @@ input[type=checkbox], input[type=radio] { accent-color: var(--AMBLUEO_UI_PRIMAIR
 @media (max-width: 420px) {
     .dashboard-kpis { grid-template-columns: minmax(0, 1fr); }
 }
+
+.dashboard-navigation { margin-bottom: 1rem; padding: .55rem .85rem; background: var(--AMBLUEO_UI_TEINTE); border-radius: .65rem; }
+.dashboard-navigation a { padding: .35rem .1rem; }
+.dashboard-canvas { width: 100%; height: 16rem; }
+.dashboard-donut { height: 12rem; }
+.dashboard-deadlines { grid-column: 1 / -1; }
+.dashboard-deadlines .table-wrap { margin-top: .75rem; }

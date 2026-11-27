@@ -24,6 +24,26 @@ def verifier_affichage(AMBLUEO_TEST_PAGE, AMBLUEO_TEST_URL):
     AMBLUEO_TEST_PAGE.get_by_label("Période des flux").select_option("1")
     AMBLUEO_TEST_PAGE.get_by_role("button", name="Appliquer").click()
     expect(AMBLUEO_TEST_PAGE.get_by_label("Période des flux")).to_have_value("1")
+    expect(AMBLUEO_TEST_PAGE.locator("#dashboard-budget-chart canvas")).to_be_visible()
+    expect(AMBLUEO_TEST_PAGE.locator("#dashboard-echeances-chart canvas")).to_be_visible()
+    AMBLUEO_TEST_PAGE.get_by_role("link", name="À encaisser, En retard", exact=False).click()
+    expect(AMBLUEO_TEST_PAGE.get_by_role("heading", name="Échéancier clients et fournisseurs")).to_be_visible()
+    expect(AMBLUEO_TEST_PAGE.get_by_role("link", name="Acompte client attendu", exact=True)).to_be_visible()
+    if AMBLUEO_TEST_PAGE.viewport_size["width"] == 1280:
+        AMBLUEO_TEST_DASHBOARD = AMBLUEO_TEST_PAGE.get_by_role("navigation", name="Fil d’Ariane").get_by_role(
+            "link", name="Atelier Horizon",
+        ).get_attribute("href")
+        AMBLUEO_TEST_PAGE.get_by_role("link", name="Acompte client attendu", exact=True).click()
+        AMBLUEO_TEST_PAGE.get_by_role("link", name="Enregistrer un règlement").click()
+        AMBLUEO_TEST_PAGE.get_by_label("Montant").fill("100")
+        AMBLUEO_TEST_PAGE.get_by_role("button", name="Enregistrer").click()
+        AMBLUEO_TEST_PAGE.goto(f"{AMBLUEO_TEST_URL}{AMBLUEO_TEST_DASHBOARD}")
+        AMBLUEO_TEST_PAGE.get_by_role("link", name="Tableau de bord", exact=True).click()
+    else:
+        AMBLUEO_TEST_PAGE.go_back()
+    expect(AMBLUEO_TEST_PAGE.locator("#dashboard-flux-chart canvas")).to_be_visible()
+    AMBLUEO_TEST_PAGE.get_by_text("Voir les montants par période").click()
+    expect(AMBLUEO_TEST_PAGE.get_by_role("region", name="Montants des flux")).to_be_visible()
     AMBLUEO_TEST_PAGE.get_by_role("navigation", name="Fil d’Ariane").get_by_role(
         "link", name="Atelier Horizon",
     ).click()

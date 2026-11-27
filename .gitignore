@@ -7,3 +7,6 @@ private/
 staticfiles/
 backups/
 /Operations/credentials/
+
+/Frontend/node_modules/
+/Frontend/static/pilot/dashboard.bundle.js*

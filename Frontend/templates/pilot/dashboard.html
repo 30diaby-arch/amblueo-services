@@ -1,4 +1,5 @@
 {% extends "pilot/base.html" %}
+{% load static %}
 {% block title %}Tableau de bord · {{ member.company }} · Amblueo Services{% endblock %}
 {% block content %}
 {% with currency=member.company.currency %}
@@ -23,11 +24,20 @@
         <div class="panel dashboard-expenses"><h2>Décaissements</h2><strong>{{ totals.expense }} {{ currency }}</strong><span>Sur la période</span></div>
         <div class="panel dashboard-risks"><h2>Projets à risque</h2><strong>{{ risks|length }}</strong><span>Sur {{ project_count }} projet{{ project_count|pluralize }}</span></div>
     </section>
+    <nav class="dashboard-navigation actions" aria-label="Sections du tableau de bord">
+        <a href="#dashboard-flux">Flux financiers</a>
+        <a href="#dashboard-projets">Avancement</a>
+        <a href="#dashboard-budgets">Budgets</a>
+        <a href="#dashboard-alertes">Alertes</a>
+        <a href="#dashboard-echeances">Échéances</a>
+    </nav>
     <div class="dashboard-panels">
         <section class="panel" aria-labelledby="dashboard-flux">
             <h2 id="dashboard-flux">Flux financiers</h2>
             <p class="helptext">Règlements enregistrés du {{ period_start }} au {{ today }}.</p>
             {% if totals.income or totals.expense %}
+            <div id="dashboard-flux-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
+            <div id="dashboard-flux-chart-fallback">
             <div class="dashboard-legend" aria-hidden="true"><span>Encaissements</span><span>Décaissements</span></div>
             <div class="dashboard-chart-wrap">
                 <div class="dashboard-chart" aria-hidden="true">
@@ -41,6 +51,7 @@
                     </div>
                     {% endfor %}
                 </div>
+            </div>
             </div>
             <details><summary>Voir les montants par période</summary>
                 <div class="table-wrap" tabindex="0" role="region" aria-label="Montants des flux">
@@ -68,6 +79,7 @@
         <section class="panel" aria-labelledby="dashboard-budgets">
             <h2 id="dashboard-budgets">Répartition du budget</h2>
             {% if budget_total %}
+                <div id="dashboard-budget-chart" class="dashboard-canvas dashboard-donut" aria-hidden="true" hidden></div>
                 <p>Total approuvé · <strong>{{ budget_total }} {{ currency }}</strong></p>
                 <ul class="clean dashboard-progress">
                     {% for project, stats in budgets %}{% if stats.approved %}
@@ -97,7 +109,30 @@
             {% if not risks and not overdue and not pending and not cash.forecast < 0 %}<p class="empty">Aucune alerte à traiter.</p>{% endif %}
             <div class="actions"><a href="{% url 'schedule' member.company_id %}">Ouvrir l’échéancier</a><a href="{% url 'company' member.company_id %}#priorites">Voir les actions à traiter</a></div>
         </section>
+        <section class="panel dashboard-deadlines" aria-labelledby="dashboard-echeances">
+            <h2 id="dashboard-echeances">Échéances à traiter</h2>
+            <p class="helptext">Montants exigibles aujourd’hui, en retard ou à échéance dans les 30 jours.</p>
+            {% if has_deadlines %}
+            <div id="dashboard-echeances-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Échéances par horizon">
+                <table>
+                    <thead><tr><th scope="col">Horizon</th><th scope="col">À encaisser</th><th scope="col">À payer</th></tr></thead>
+                    <tbody>
+                    {% for row in deadlines %}
+                    <tr>
+                        <th scope="row">{{ row.label }}</th>
+                        <td>{% if row.income %}<a href="{% url 'schedule' member.company_id %}?kind=income{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À encaisser, {{ row.label }} : {{ row.income }} {{ currency }}">{{ row.income }} {{ currency }}</a>{% else %}—{% endif %}</td>
+                        <td>{% if row.expense %}<a href="{% url 'schedule' member.company_id %}?kind=expense{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À payer, {{ row.label }} : {{ row.expense }} {{ currency }}">{{ row.expense }} {{ currency }}</a>{% else %}—{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}<p class="empty">Aucune échéance ouverte sur cet horizon.</p>{% endif %}
+        </section>
     </div>
 </div>
+{{ chart_data|json_script:"dashboard-data" }}
+<script type="module" src="{% static 'pilot/dashboard.bundle.js' %}"></script>
 {% endwith %}
 {% endblock %}

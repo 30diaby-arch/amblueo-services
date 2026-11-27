@@ -1,0 +1,13 @@
+{
+  "name": "amblueo-frontend",
+  "private": true,
+  "scripts": {
+    "build": "esbuild charts/dashboard.js --bundle --minify --legal-comments=linked --outfile=static/pilot/dashboard.bundle.js"
+  },
+  "dependencies": {
+    "echarts": "6.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

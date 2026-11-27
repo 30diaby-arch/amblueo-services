@@ -65,6 +65,45 @@ def flux(AMBLUEO_DASHBOARD_ENTREPRISE, AMBLUEO_DASHBOARD_JOUR, AMBLUEO_DASHBOARD
     return AMBLUEO_DASHBOARD_DEBUT, AMBLUEO_DASHBOARD_POINTS, AMBLUEO_DASHBOARD_TOTAUX
 
 
+def echeances(AMBLUEO_DASHBOARD_ENTREPRISE, AMBLUEO_DASHBOARD_JOUR):
+    AMBLUEO_DASHBOARD_SEMAINE = AMBLUEO_DASHBOARD_JOUR + timedelta(days=7)
+    AMBLUEO_DASHBOARD_HORIZON = AMBLUEO_DASHBOARD_JOUR + timedelta(days=30)
+    AMBLUEO_DASHBOARD_RETARDS = []
+    AMBLUEO_DASHBOARD_TRANCHES = [
+        {"label": "En retard", "end": AMBLUEO_DASHBOARD_JOUR - timedelta(days=1)},
+        {"label": "De J à J+7", "start": AMBLUEO_DASHBOARD_JOUR, "end": AMBLUEO_DASHBOARD_SEMAINE},
+        {"label": "De J+8 à J+30", "start": AMBLUEO_DASHBOARD_SEMAINE + timedelta(days=1),
+         "end": AMBLUEO_DASHBOARD_HORIZON},
+    ]
+    for AMBLUEO_DASHBOARD_TRANCHE in AMBLUEO_DASHBOARD_TRANCHES:
+        AMBLUEO_DASHBOARD_TRANCHE.update(dict.fromkeys(Operation.Kind.values, finance.AMBLUEO_FINANCE_ZERO))
+    for AMBLUEO_DASHBOARD_OPERATION, AMBLUEO_DASHBOARD_RESTE in finance.payment_schedule(Operation.objects.filter(
+        project__company=AMBLUEO_DASHBOARD_ENTREPRISE, due__lte=AMBLUEO_DASHBOARD_HORIZON,
+    ).select_related("project").order_by("due", "pk")):
+        if AMBLUEO_DASHBOARD_OPERATION.due < AMBLUEO_DASHBOARD_JOUR:
+            AMBLUEO_DASHBOARD_RETARDS.append((AMBLUEO_DASHBOARD_OPERATION, AMBLUEO_DASHBOARD_RESTE))
+        for AMBLUEO_DASHBOARD_TRANCHE in AMBLUEO_DASHBOARD_TRANCHES:
+            if AMBLUEO_DASHBOARD_OPERATION.due <= AMBLUEO_DASHBOARD_TRANCHE["end"]:
+                AMBLUEO_DASHBOARD_TRANCHE[AMBLUEO_DASHBOARD_OPERATION.kind] += AMBLUEO_DASHBOARD_RESTE
+                break
+    return AMBLUEO_DASHBOARD_TRANCHES, AMBLUEO_DASHBOARD_RETARDS
+
+
+def graphique_budget(AMBLUEO_DASHBOARD_BUDGETS):
+    AMBLUEO_DASHBOARD_POSTES = sorted(
+        ({"label": AMBLUEO_DASHBOARD_PROJET.name, "amount": AMBLUEO_DASHBOARD_STATS["approved"]}
+         for AMBLUEO_DASHBOARD_PROJET, AMBLUEO_DASHBOARD_STATS in AMBLUEO_DASHBOARD_BUDGETS
+         if AMBLUEO_DASHBOARD_STATS["approved"]),
+        key=lambda AMBLUEO_DASHBOARD_POSTE: AMBLUEO_DASHBOARD_POSTE["amount"], reverse=True,
+    )
+    if len(AMBLUEO_DASHBOARD_POSTES) <= 6:
+        return AMBLUEO_DASHBOARD_POSTES
+    return [*AMBLUEO_DASHBOARD_POSTES[:6], {
+        "label": "Autres projets",
+        "amount": sum(AMBLUEO_DASHBOARD_POSTE["amount"] for AMBLUEO_DASHBOARD_POSTE in AMBLUEO_DASHBOARD_POSTES[6:]),
+    }]
+
+
 @login_required
 @never_cache
 @require_safe
@@ -89,9 +128,7 @@ def overview(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
     AMBLUEO_UI_TOTAL_BUDGET = sum(
         (AMBLUEO_UI_STATS["approved"] for _, AMBLUEO_UI_STATS in AMBLUEO_UI_BUDGETS), finance.AMBLUEO_FINANCE_ZERO,
     )
-    AMBLUEO_UI_ECHEANCES = finance.payment_schedule(Operation.objects.filter(
-        project__company_id=AMBLUEO_UI_ENTREPRISE_ID, due__lt=AMBLUEO_UI_JOUR,
-    ).select_related("project").order_by("due", "pk"))
+    AMBLUEO_UI_TRANCHES, AMBLUEO_UI_RETARDS = echeances(AMBLUEO_UI_MEMBRE.company, AMBLUEO_UI_JOUR)
     AMBLUEO_UI_DEPENSES = Operation.objects.filter(
         project__company_id=AMBLUEO_UI_ENTREPRISE_ID, kind=Operation.Kind.EXPENSE, state=Operation.State.SUBMITTED,
     ).select_related("project").order_by("due", "pk")
@@ -102,5 +139,11 @@ def overview(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
         "cash": finance.cash_summary(AMBLUEO_UI_MEMBRE.company),
         "projects": AMBLUEO_UI_PROJETS, "project_count": len(AMBLUEO_UI_PROJETS),
         "budgets": AMBLUEO_UI_BUDGETS, "budget_total": AMBLUEO_UI_TOTAL_BUDGET,
-        "risks": AMBLUEO_UI_RISQUES, "overdue": AMBLUEO_UI_ECHEANCES, "pending": AMBLUEO_UI_DEPENSES[:5],
+        "risks": AMBLUEO_UI_RISQUES, "overdue": AMBLUEO_UI_RETARDS, "pending": AMBLUEO_UI_DEPENSES[:5],
+        "deadlines": AMBLUEO_UI_TRANCHES,
+        "has_deadlines": any(
+            AMBLUEO_UI_TRANCHE["income"] or AMBLUEO_UI_TRANCHE["expense"] for AMBLUEO_UI_TRANCHE in AMBLUEO_UI_TRANCHES
+        ),
+        "chart_data": {"currency": AMBLUEO_UI_MEMBRE.company.currency, "flow": AMBLUEO_UI_FLUX,
+                       "budgets": graphique_budget(AMBLUEO_UI_BUDGETS), "deadlines": AMBLUEO_UI_TRANCHES},
     })

@@ -1,3 +1,10 @@
+FROM node:22-bookworm-slim AS graphiques
+WORKDIR /build
+COPY Frontend/package.json Frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY Frontend/charts/ ./charts/
+RUN npm run build
+
 FROM python:3.12-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
@@ -10,6 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 COPY Backend/ /app/Backend/
 COPY Frontend/templates/ /app/Frontend/templates/
 COPY Frontend/static/ /app/Frontend/static/
+COPY --from=graphiques /build/static/pilot/ /app/Frontend/static/pilot/
 COPY Frontend/Logo/ /app/Frontend/Logo/
 WORKDIR /app/Backend
 USER 10001:10001
