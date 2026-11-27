@@ -250,6 +250,64 @@ class PilotTest(TestCase):
         for AMBLUEO_TEST_MODELE in (Project, Budget, Operation, Posting, ImportLine, Audit):
             self.assertFalse(AMBLUEO_TEST_MODELE.objects.exists())
 
+    def test_dashboard_uses_company_payments_and_existing_finance_rules(self):
+        AMBLUEO_TEST_PROJET = self.project(self.AMBLUEO_TEST_OWNER, "Projet de pilotage")
+        AMBLUEO_TEST_AUTRE_PROJET = self.project(self.AMBLUEO_TEST_OTHER, "Projet d’une autre entreprise")
+        Budget.objects.create(project=AMBLUEO_TEST_PROJET, amount=Decimal("1000"), approved=True)
+        Task.objects.create(
+            project=AMBLUEO_TEST_PROJET, title="Livraison", assignee=self.AMBLUEO_TEST_MEMBER,
+            status="done", start=self.AMBLUEO_TEST_DATE, end=self.AMBLUEO_TEST_DATE, estimated=1,
+        )
+        AMBLUEO_TEST_AUJOURDHUI = timezone.localdate()
+        AMBLUEO_TEST_HIER = AMBLUEO_TEST_AUJOURDHUI - timedelta(days=1)
+        AMBLUEO_TEST_MOIS_PRECEDENT = AMBLUEO_TEST_AUJOURDHUI.replace(day=1) - timedelta(days=1)
+        AMBLUEO_TEST_URL = reverse("dashboard", args=[self.AMBLUEO_TEST_A.pk])
+        self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
+        self.client.post(reverse("opening", args=[self.AMBLUEO_TEST_A.pk]), {
+            "amount": "100", "date": AMBLUEO_TEST_AUJOURDHUI,
+        })
+        AMBLUEO_TEST_RECETTE = Operation.objects.create(
+            project=AMBLUEO_TEST_PROJET, author=self.AMBLUEO_TEST_OWNER, title="Créance échue",
+            kind="income", state="approved", category="Services", amount=500, due=AMBLUEO_TEST_HIER,
+        )
+        AMBLUEO_TEST_DEPENSE = Operation.objects.create(
+            project=AMBLUEO_TEST_PROJET, author=self.AMBLUEO_TEST_OWNER, title="Dépense engagée",
+            kind="expense", state="approved", category="Services", amount=1200, due=AMBLUEO_TEST_AUJOURDHUI,
+        )
+        AMBLUEO_TEST_RECETTE_AUTRE = Operation.objects.create(
+            project=AMBLUEO_TEST_AUTRE_PROJET, author=self.AMBLUEO_TEST_OTHER, title="Recette confidentielle",
+            kind="income", state="approved", category="Services", amount=999, due=AMBLUEO_TEST_HIER,
+        )
+        for AMBLUEO_TEST_OP, AMBLUEO_TEST_TYPE, AMBLUEO_TEST_MONTANT, AMBLUEO_TEST_DATE_OPERATION in [
+            (AMBLUEO_TEST_RECETTE, "payment", 200, AMBLUEO_TEST_AUJOURDHUI),
+            (AMBLUEO_TEST_RECETTE, "payment", 30, AMBLUEO_TEST_MOIS_PRECEDENT),
+            (AMBLUEO_TEST_DEPENSE, "realization", 100, AMBLUEO_TEST_AUJOURDHUI),
+            (AMBLUEO_TEST_DEPENSE, "payment", 50, AMBLUEO_TEST_AUJOURDHUI),
+            (AMBLUEO_TEST_RECETTE_AUTRE, "payment", 999, AMBLUEO_TEST_AUJOURDHUI),
+        ]:
+            finance.post(AMBLUEO_TEST_OP.author, AMBLUEO_TEST_OP.pk, AMBLUEO_TEST_TYPE,
+                         Decimal(AMBLUEO_TEST_MONTANT), AMBLUEO_TEST_DATE_OPERATION, uuid.uuid4())
+        AMBLUEO_TEST_ANNULEE = finance.post(
+            self.AMBLUEO_TEST_OWNER, AMBLUEO_TEST_RECETTE.pk, "payment", Decimal("10"),
+            AMBLUEO_TEST_AUJOURDHUI, uuid.uuid4(),
+        )
+        AMBLUEO_TEST_ANNULEE.void = True
+        AMBLUEO_TEST_ANNULEE.save(update_fields=["void"])
+        AMBLUEO_TEST_PAGE = self.client.get(AMBLUEO_TEST_URL, {"periode": "1"})
+        self.assertContains(AMBLUEO_TEST_PAGE, "Créance échue")
+        self.assertContains(AMBLUEO_TEST_PAGE, "Budget dépassé")
+        self.assertNotContains(AMBLUEO_TEST_PAGE, "Projet d’une autre entreprise")
+        self.assertEqual(AMBLUEO_TEST_PAGE.context["totals"], {"income": Decimal("200"), "expense": Decimal("50")})
+        self.assertEqual(AMBLUEO_TEST_PAGE.context["cash"]["current"], Decimal("250"))
+        self.assertEqual(AMBLUEO_TEST_PAGE.context["projects"][0].tasks_done, 1)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_URL).context["totals"]["income"], Decimal("230"))
+        self.client.force_login(self.AMBLUEO_TEST_FIN.user)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_URL).status_code, 200)
+        self.client.force_login(self.AMBLUEO_TEST_MANAGER.user)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_URL).status_code, 403)
+        self.client.force_login(self.AMBLUEO_TEST_OTHER.user)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_URL).status_code, 404)
+
     def test_full_financial_recipe(self):
         AMBLUEO_TEST_PROJET = self.project(self.AMBLUEO_TEST_MANAGER, "Infrastructure")
         AMBLUEO_TEST_A = self.AMBLUEO_TEST_A.pk

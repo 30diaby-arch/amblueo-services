@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth
 from django.urls import path
 
-from pilot.views import accounts, companies, exports, financial, imports, projects, system
+from pilot.views import accounts, companies, dashboard, exports, financial, imports, projects, system
 
 urlpatterns = [
     path("health/", system.health, name="health"),
@@ -35,6 +35,7 @@ urlpatterns = [
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/operation/<int:AMBLUEO_UI_OBJET_ID>/correction/<int:AMBLUEO_UI_ECRITURE_ID>/", financial.posting_void, name="posting_void"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/operation/<int:AMBLUEO_UI_OBJET_ID>/document/", financial.attachment, name="attachment"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/tresorerie/", financial.opening, name="opening"),
+    path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/tableau-de-bord/", dashboard.overview, name="dashboard"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/import-initial/", imports.initial, name="initial_import"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/echeancier/", financial.schedule, name="schedule"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/operation/<int:AMBLUEO_UI_OBJET_ID>/reference/",

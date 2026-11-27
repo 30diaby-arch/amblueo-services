@@ -1,0 +1,103 @@
+{% extends "pilot/base.html" %}
+{% block title %}Tableau de bord · {{ member.company }} · Amblueo Services{% endblock %}
+{% block content %}
+{% with currency=member.company.currency %}
+<div class="dashboard">
+    <nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'company' member.company_id %}">{{ member.company }}</a></nav>
+    <div class="heading dashboard-header">
+        <div><h1>Tableau de bord</h1><p>{{ member.company }} · {{ today }} · {{ currency }}</p></div>
+        <form method="get" class="actions">
+            <label for="dashboard-periode">Période des flux</label>
+            <select id="dashboard-periode" name="periode">
+                {% for value, label in periods %}<option value="{{ value }}"{% if period == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <button class="quiet">Appliquer</button>
+        </form>
+    </div>
+    <section class="dashboard-kpis" aria-label="Indicateurs clés">
+        <div class="panel"><h2>Encaissements</h2><strong>{{ totals.income }} {{ currency }}</strong><span>Sur la période</span></div>
+        <div class="panel"><h2>Trésorerie</h2>
+            {% if cash %}<strong>{{ cash.current }} {{ currency }}</strong><span>Prévision à 30 jours · {{ cash.forecast }} {{ currency }}</span>
+            {% else %}<a href="{% url 'opening' member.company_id %}">Initialiser le solde d’ouverture</a>{% endif %}
+        </div>
+        <div class="panel dashboard-expenses"><h2>Décaissements</h2><strong>{{ totals.expense }} {{ currency }}</strong><span>Sur la période</span></div>
+        <div class="panel dashboard-risks"><h2>Projets à risque</h2><strong>{{ risks|length }}</strong><span>Sur {{ project_count }} projet{{ project_count|pluralize }}</span></div>
+    </section>
+    <div class="dashboard-panels">
+        <section class="panel" aria-labelledby="dashboard-flux">
+            <h2 id="dashboard-flux">Flux financiers</h2>
+            <p class="helptext">Règlements enregistrés du {{ period_start }} au {{ today }}.</p>
+            {% if totals.income or totals.expense %}
+            <div class="dashboard-legend" aria-hidden="true"><span>Encaissements</span><span>Décaissements</span></div>
+            <div class="dashboard-chart-wrap">
+                <div class="dashboard-chart" aria-hidden="true">
+                    {% for point in flow %}
+                    <div class="dashboard-group">
+                        <div class="dashboard-columns">
+                            <div class="dashboard-bar" style="--dashboard-value:{{ point.income_height }}%" title="Encaissements · {{ point.income }} {{ currency }}"></div>
+                            <div class="dashboard-bar expense" style="--dashboard-value:{{ point.expense_height }}%" title="Décaissements · {{ point.expense }} {{ currency }}"></div>
+                        </div>
+                        <small>{{ point.label }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <details><summary>Voir les montants par période</summary>
+                <div class="table-wrap" tabindex="0" role="region" aria-label="Montants des flux">
+                    <table><thead><tr><th scope="col">Période</th><th scope="col">Encaissements</th><th scope="col">Décaissements</th></tr></thead>
+                    <tbody>{% for point in flow %}<tr><th scope="row">{{ point.label }}</th><td>{{ point.income }} {{ currency }}</td><td>{{ point.expense }} {{ currency }}</td></tr>{% endfor %}</tbody></table>
+                </div>
+            </details>
+            {% else %}<p class="empty">Aucun règlement enregistré sur cette période.</p>{% endif %}
+        </section>
+        <section class="panel" aria-labelledby="dashboard-projets">
+            <h2 id="dashboard-projets">Avancement des projets</h2>
+            <p class="helptext">Part des tâches terminées pour chaque projet.</p>
+            <ul class="clean dashboard-progress">
+                {% for project in projects|slice:":6" %}
+                <li><a href="{% url 'project' member.company_id project.pk %}">{{ project.name }}</a>
+                    {% if project.tasks_total %}
+                    <span>{% widthratio project.tasks_done project.tasks_total 100 %} %</span>
+                    <progress max="{{ project.tasks_total }}" value="{{ project.tasks_done }}" aria-label="Tâches terminées pour {{ project.name }}"></progress>
+                    {% else %}<span class="helptext">Aucune tâche</span>{% endif %}
+                </li>
+                {% empty %}<li class="empty">Aucun projet.</li>{% endfor %}
+            </ul>
+            {% if project_count > 6 %}<a href="{% url 'company' member.company_id %}#projets">Voir tous les projets</a>{% endif %}
+        </section>
+        <section class="panel" aria-labelledby="dashboard-budgets">
+            <h2 id="dashboard-budgets">Répartition du budget</h2>
+            {% if budget_total %}
+                <p>Total approuvé · <strong>{{ budget_total }} {{ currency }}</strong></p>
+                <ul class="clean dashboard-progress">
+                    {% for project, stats in budgets %}{% if stats.approved %}
+                    <li><a href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }}</a>
+                        {% widthratio stats.approved budget_total 100 as share %}
+                        <span>{{ stats.approved }} {{ currency }} · {{ share }} %</span>
+                        <progress max="100" value="{{ share }}" aria-label="Part du budget pour {{ project.name }}"></progress>
+                    </li>
+                    {% endif %}{% endfor %}
+                </ul>
+            {% else %}<p class="empty">Aucun budget approuvé.</p>{% endif %}
+        </section>
+        <section class="panel" aria-labelledby="dashboard-alertes">
+            <h2 id="dashboard-alertes">Alertes</h2>
+            <ul class="clean dashboard-alerts">
+                {% if cash.forecast < 0 %}<li><strong>Trésorerie</strong><a href="{% url 'company' member.company_id %}">Solde prévisionnel négatif · {{ cash.forecast }} {{ currency }}</a></li>{% endif %}
+                {% for project, stats in risks|slice:":5" %}
+                <li><strong>Budget</strong><a href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }} · {% if stats.available < 0 %}Budget dépassé{% else %}Risque de dépassement{% endif %}</a></li>
+                {% endfor %}
+                {% for op, amount in overdue|slice:":5" %}
+                <li><strong>Impayé</strong><a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }} · {{ op.due }}</a></li>
+                {% endfor %}
+                {% for op in pending %}
+                <li><strong>Validation</strong><a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ op.amount }} {{ currency }}</a></li>
+                {% endfor %}
+            </ul>
+            {% if not risks and not overdue and not pending and not cash.forecast < 0 %}<p class="empty">Aucune alerte à traiter.</p>{% endif %}
+            <div class="actions"><a href="{% url 'schedule' member.company_id %}">Ouvrir l’échéancier</a><a href="{% url 'company' member.company_id %}#priorites">Voir les actions à traiter</a></div>
+        </section>
+    </div>
+</div>
+{% endwith %}
+{% endblock %}

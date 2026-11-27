@@ -68,3 +68,14 @@ reprises comme des coûts déjà réalisés, à la date fournie, avec un budget
 approuvé. Pour le point de gestion pilote, rapprocher séparément la situation
 des budgets et les soldes ouverts, et noter tout historique conservé dans
 l’ancien tableur.
+
+## Tableau de bord d’aide à la décision
+
+Depuis une entreprise de test, ouvrir **Tableau de bord** avec un compte
+dirigeant ou financier. Changer la période des flux et rapprocher les montants
+avec les règlements saisis dans cette période. Créer un règlement partiel puis
+l’annuler et vérifier que les flux et la trésorerie suivent la correction.
+Terminer une tâche et vérifier l’avancement du projet. Créer un dépassement
+budgétaire ou une créance échue, puis suivre le lien de l’alerte pour retrouver
+sa source. Vérifier le rendu sur ordinateur et mobile, l’affichage sans données
+et l’accès refusé depuis un compte d’une autre entreprise.

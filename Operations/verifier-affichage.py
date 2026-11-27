@@ -18,6 +18,15 @@ def verifier_affichage(AMBLUEO_TEST_PAGE, AMBLUEO_TEST_URL):
     AMBLUEO_TEST_PAGE.get_by_role("button", name="Se connecter").click()
     expect(AMBLUEO_TEST_PAGE.get_by_role("heading", name="Mes entreprises")).to_be_visible()
     AMBLUEO_TEST_PAGE.get_by_role("link", name="Atelier Horizon").click()
+    AMBLUEO_TEST_PAGE.get_by_role("link", name="Tableau de bord", exact=True).click()
+    expect(AMBLUEO_TEST_PAGE.get_by_role("heading", name="Tableau de bord")).to_be_visible()
+    expect(AMBLUEO_TEST_PAGE.get_by_role("heading", name="Avancement des projets")).to_be_visible()
+    AMBLUEO_TEST_PAGE.get_by_label("Période des flux").select_option("1")
+    AMBLUEO_TEST_PAGE.get_by_role("button", name="Appliquer").click()
+    expect(AMBLUEO_TEST_PAGE.get_by_label("Période des flux")).to_have_value("1")
+    AMBLUEO_TEST_PAGE.get_by_role("navigation", name="Fil d’Ariane").get_by_role(
+        "link", name="Atelier Horizon",
+    ).click()
     AMBLUEO_TEST_PAGE.get_by_role("link", name="Échéancier", exact=True).click()
     expect(AMBLUEO_TEST_PAGE.get_by_role("heading", name="Échéancier clients et fournisseurs")).to_be_visible()
     AMBLUEO_TEST_PAGE.get_by_role("navigation", name="Fil d’Ariane").get_by_role(
