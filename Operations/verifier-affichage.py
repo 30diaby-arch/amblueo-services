@@ -42,6 +42,8 @@ def verifier_affichage(AMBLUEO_TEST_PAGE, AMBLUEO_TEST_URL):
     else:
         AMBLUEO_TEST_PAGE.go_back()
     expect(AMBLUEO_TEST_PAGE.locator("#dashboard-flux-chart canvas")).to_be_visible()
+    expect(AMBLUEO_TEST_PAGE.locator("#dashboard-flux-chart")).to_have_css("height", "256px")
+    expect(AMBLUEO_TEST_PAGE.locator(".dashboard-kpis")).to_have_css("display", "grid")
     AMBLUEO_TEST_PAGE.get_by_text("Voir les montants par période").click()
     expect(AMBLUEO_TEST_PAGE.get_by_role("region", name="Montants des flux")).to_be_visible()
     AMBLUEO_TEST_PAGE.get_by_role("navigation", name="Fil d’Ariane").get_by_role(

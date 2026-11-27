@@ -59,6 +59,10 @@ sudo certbot certonly --standalone --cert-name services.amblueo.com -d services.
 
 ## Lancer ou mettre à jour la plateforme
 
+La collecte des fichiers statiques crée le manifeste des URL versionnées.
+Effectuer `collectstatic` avant de redémarrer Django. Conserver le volume
+`statiques` partagé avec Nginx.
+
 Avant une mise à jour d’une instance en service, vérifier qu’une sauvegarde récente de la base et des justificatifs est disponible. Les commandes suivantes s’exécutent depuis la racine du dépôt. Réserver une fenêtre de maintenance pour l’arrêt du proxy et de Django.
 
 ```bash

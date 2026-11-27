@@ -66,6 +66,11 @@ USE_TZ = True
 STATICFILES_DIRS = [AMBLUEO_UI_RACINE / "static", ("marque", AMBLUEO_UI_RACINE / "Logo")]
 STATIC_URL = "/static/"
 STATIC_ROOT = os.getenv("AMBLUEO_INFRA_STATIQUES", AMBLUEO_INFRA_RACINE / "staticfiles")
+if not DEBUG:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+    }
 MEDIA_ROOT = os.getenv("AMBLUEO_INFRA_JUSTIFICATIFS", AMBLUEO_INFRA_RACINE / "private")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = (
