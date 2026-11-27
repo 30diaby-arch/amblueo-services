@@ -30,3 +30,41 @@ Le test de restauration local utilise les utilitaires PostgreSQL et tar.
 Il reste à exécuter les scripts de bout en bout avec Docker Compose,
 PostgreSQL 17, et le service de sauvegarde de l'hôte Debian 12. Vérifier
 aussi les ports, les certificats et l'envoi SMTP sur cet hôte.
+
+## Reprise initiale et échéancier du client pilote
+
+Utiliser une entreprise de test, un compte dirigeant, un compte financier et
+un collaborateur. Lancer la validation technique avec `./Operations/verifier.sh`.
+Avec Playwright installé, ajouter `--affichage` pour rejouer le parcours dans le
+navigateur.
+
+1. Depuis la fiche entreprise, ouvrir **Importer des données** et télécharger
+   le modèle. Préparer dans le même fichier un projet avec un responsable
+   actif, un budget approuvé de 1 000, une recette ouverte de 600 et une
+   dépense déjà réalisée de 300. Mettre une référence et un tiers sur les deux
+   opérations. Utiliser une date de réalisation passée ou égale à aujourd’hui.
+2. Prévisualiser un fichier avec un responsable d’une autre entreprise ou, en
+   XOF, un montant fractionnaire. Vérifier que la ligne est signalée, que le
+   fichier ne peut pas être confirmé et qu’aucun projet ni montant n’a été créé.
+3. Corriger puis prévisualiser le fichier. Rapprocher les trois totaux du
+   tableur. Confirmer et vérifier le bilan de l’import ainsi que l’entrée dans
+   l’historique. Charger le même fichier une seconde fois et vérifier que
+   chaque ligne est marquée **Déjà importée**. Modifier le montant d’une ligne
+   sans changer son identifiant et vérifier que la modification est refusée.
+4. Ouvrir **Échéancier**. Vérifier les totaux de 600 à encaisser et 300 à payer.
+   Filtrer par projet, tiers, dates et type. Depuis la dépense, enregistrer
+   un règlement de 120. Contrôler que le reste passe à 180, puis qu’il revient
+   à 300 après annulation du règlement. Vérifier qu’une opération entièrement
+   réglée disparaît de l’échéancier.
+5. Ouvrir une opération existante sans tiers avec le compte financier.
+   Renseigner le tiers et la référence depuis sa fiche, puis les retrouver dans
+   l’échéancier. Vérifier qu’un collaborateur ne peut ouvrir ni l’import ni
+   l’échéancier, et qu’un membre d’une autre entreprise ne voit aucune donnée.
+
+Le fichier de reprise contient les soldes encore ouverts à la date de bascule.
+Les montants représentent le restant à encaisser ou à payer. La reprise ne
+reconstitue pas les règlements historiques. Les dépenses du fichier sont
+reprises comme des coûts déjà réalisés, à la date fournie, avec un budget
+approuvé. Pour le point de gestion pilote, rapprocher séparément la situation
+des budgets et les soldes ouverts, et noter tout historique conservé dans
+l’ancien tableur.

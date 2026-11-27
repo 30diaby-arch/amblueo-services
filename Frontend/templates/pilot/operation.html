@@ -2,6 +2,8 @@
 <nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'project' member.company_id op.project_id %}">{{ op.project }}</a></nav>
 <section class="panel"><div class="heading"><div><h1>{{ op.title }}</h1><p>{{ op.get_kind_display }} · {{ op.category }} · {{ op.get_state_display }} · échéance {{ op.due }}</p></div><strong class="amount">{{ op.amount }} {{ member.company.currency }}</strong></div>
 {% if op.state == "approved" %}<div class="grid metrics">{% if op.kind == "expense" %}<div><span>Réalisé</span><strong>{{ balances.0 }}</strong></div>{% endif %}<div><span>Réglé</span><strong>{{ balances.1 }}</strong></div><div><span>Restant exigible</span><strong>{{ balances.2 }}</strong></div></div>{% endif %}
+<p>Client ou fournisseur : {{ op.counterparty|default:"Non renseigné" }} · Référence : {{ op.external_reference|default:"Non renseignée" }}
+{% if can_finance %} · <a href="{% url 'operation_reference' member.company_id op.pk %}">Modifier le tiers et la référence</a>{% endif %}</p>
 {% if op.evidence %}<p><a href="{% url 'attachment' member.company_id op.pk %}">Télécharger le justificatif</a></p>{% endif %}
 <div class="actions">
 {% if op.state == "draft" and can_submit %}<a class="button" href="{% url 'change_state' member.company_id op.pk 'submit' %}">Soumettre</a>{% endif %}

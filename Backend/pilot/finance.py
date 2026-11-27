@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 
 from .models import Audit, Budget, CashOpening, Operation, Posting, Project
@@ -34,11 +34,34 @@ def balances(AMBLUEO_FINANCE_OPERATION):
     AMBLUEO_FINANCE_POSTINGS = AMBLUEO_FINANCE_OPERATION.postings.filter(void=False)
     AMBLUEO_FINANCE_REALISE = total(AMBLUEO_FINANCE_POSTINGS.filter(kind=Posting.Kind.REALIZATION))
     AMBLUEO_FINANCE_REGLE = total(AMBLUEO_FINANCE_POSTINGS.filter(kind=Posting.Kind.PAYMENT))
+    return AMBLUEO_FINANCE_REALISE, AMBLUEO_FINANCE_REGLE, outstanding(
+        AMBLUEO_FINANCE_OPERATION, AMBLUEO_FINANCE_REALISE, AMBLUEO_FINANCE_REGLE,
+    )
+
+
+def outstanding(AMBLUEO_FINANCE_OPERATION, AMBLUEO_FINANCE_REALISE, AMBLUEO_FINANCE_REGLE):
     AMBLUEO_FINANCE_EXIGIBLE = (
         AMBLUEO_FINANCE_REALISE if AMBLUEO_FINANCE_OPERATION.kind == Operation.Kind.EXPENSE
         else AMBLUEO_FINANCE_OPERATION.amount
     )
-    return AMBLUEO_FINANCE_REALISE, AMBLUEO_FINANCE_REGLE, AMBLUEO_FINANCE_EXIGIBLE - AMBLUEO_FINANCE_REGLE
+    return AMBLUEO_FINANCE_EXIGIBLE - AMBLUEO_FINANCE_REGLE
+
+
+def payment_schedule(AMBLUEO_FINANCE_OPERATIONS):
+    AMBLUEO_FINANCE_OPERATIONS = AMBLUEO_FINANCE_OPERATIONS.filter(state=Operation.State.APPROVED).annotate(
+        realized=Sum("postings__amount", filter=Q(postings__kind=Posting.Kind.REALIZATION, postings__void=False),
+                     default=AMBLUEO_FINANCE_ZERO),
+        paid=Sum("postings__amount", filter=Q(postings__kind=Posting.Kind.PAYMENT, postings__void=False),
+                 default=AMBLUEO_FINANCE_ZERO),
+    )
+    AMBLUEO_FINANCE_LIGNES = []
+    for AMBLUEO_FINANCE_OPERATION in AMBLUEO_FINANCE_OPERATIONS:
+        AMBLUEO_FINANCE_RESTE = outstanding(
+            AMBLUEO_FINANCE_OPERATION, AMBLUEO_FINANCE_OPERATION.realized, AMBLUEO_FINANCE_OPERATION.paid,
+        )
+        if AMBLUEO_FINANCE_RESTE > 0:
+            AMBLUEO_FINANCE_LIGNES.append((AMBLUEO_FINANCE_OPERATION, AMBLUEO_FINANCE_RESTE))
+    return AMBLUEO_FINANCE_LIGNES
 
 
 def budget_summary(AMBLUEO_BUDGET_PROJET):

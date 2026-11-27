@@ -120,6 +120,8 @@ class Operation(models.Model):
     kind = models.CharField(max_length=8, choices=Kind.choices)
     state = models.CharField(max_length=12, choices=State.choices, default=State.DRAFT)
     title = models.CharField("Libellé", max_length=150)
+    counterparty = models.CharField("Client ou fournisseur", max_length=150, blank=True)
+    external_reference = models.CharField("Référence externe", max_length=100, blank=True)
     category = models.CharField("Catégorie", max_length=80)
     amount = models.DecimalField("Montant", max_digits=16, decimal_places=2, validators=AMBLUEO_FINANCE_POSITIF)
     due = models.DateField("Échéance")
@@ -164,3 +166,14 @@ class Audit(models.Model):
 
     class Meta:
         ordering = ["-date", "-pk"]
+
+
+class ImportLine(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    reference = models.CharField(max_length=100)
+    digest = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["company", "reference"], name="unique_company_import_reference"),
+        ]

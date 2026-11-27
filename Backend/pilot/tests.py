@@ -16,9 +16,10 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from unittest import skipUnless
+from unittest.mock import patch
 
-from . import finance
-from .models import Audit, Budget, Company, Membership, Operation, Posting, Project, Role, Task, User
+from . import finance, initial_import
+from .models import Audit, Budget, Company, ImportLine, Membership, Operation, Posting, Project, Role, Task, User
 
 
 class PilotTest(TestCase):
@@ -147,6 +148,107 @@ class PilotTest(TestCase):
         self.assertEqual(mail.outbox[-1].to, [self.AMBLUEO_TEST_MANAGER.user.email])
         self.assertIn("Voir la tâche dans le projet", mail.outbox[-1].alternatives[0].content)
         self.assertIn("Échéance".lower(), mail.outbox[-1].body)
+
+    def csv_upload(self, *AMBLUEO_TEST_LIGNES):
+        AMBLUEO_TEST_TEXTE = io.StringIO()
+        AMBLUEO_TEST_CSV = csv.DictWriter(
+            AMBLUEO_TEST_TEXTE, fieldnames=initial_import.AMBLUEO_IMPORT_COLONNES, delimiter=";",
+        )
+        AMBLUEO_TEST_CSV.writeheader()
+        AMBLUEO_TEST_CSV.writerows(AMBLUEO_TEST_LIGNES)
+        return {"file": SimpleUploadedFile("reprise.csv", AMBLUEO_TEST_TEXTE.getvalue().encode("utf-8-sig"))}
+
+    def test_initial_import_and_schedule(self):
+        self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
+        AMBLUEO_TEST_ENTREPRISE = self.AMBLUEO_TEST_A.pk
+        AMBLUEO_TEST_IMPORT = reverse("initial_import", args=[AMBLUEO_TEST_ENTREPRISE])
+        AMBLUEO_TEST_ECHEANCIER = reverse("schedule", args=[AMBLUEO_TEST_ENTREPRISE])
+        AMBLUEO_TEST_LIGNES = [
+            dict(type="depense", identifiant="D-1", projet="Reprise", montant="300", libelle="Prestation importée",
+                 categorie="Services", tiers="Fournisseur A", reference="FAC-1",
+                 echeance=self.AMBLUEO_TEST_DATE, date_realisation=self.AMBLUEO_TEST_DATE),
+            dict(type="recette", identifiant="R-1", projet="Reprise", montant="600", libelle="Vente importée",
+                 categorie="Services", tiers="Client A", reference="FAC-2", echeance=self.AMBLUEO_TEST_DATE),
+            dict(type="budget", identifiant="B-1", projet="Reprise", montant="1000"),
+            dict(type="projet", identifiant="P-1", projet="Reprise", statut="active",
+                 responsable=self.AMBLUEO_TEST_MANAGER.user.username, debut=self.AMBLUEO_TEST_DATE,
+                 fin=self.AMBLUEO_TEST_DATE),
+        ]
+        self.assertContains(self.client.get(AMBLUEO_TEST_IMPORT, {"modele": 1}), "type;identifiant;projet")
+        AMBLUEO_TEST_INVALIDES = [*AMBLUEO_TEST_LIGNES[:-1], {
+            **AMBLUEO_TEST_LIGNES[-1], "responsable": self.AMBLUEO_TEST_OTHER.user.username,
+        }]
+        AMBLUEO_TEST_APERCU = self.client.post(AMBLUEO_TEST_IMPORT, self.csv_upload(*AMBLUEO_TEST_INVALIDES))
+        self.assertContains(AMBLUEO_TEST_APERCU, "membre actif")
+        self.assertNotContains(AMBLUEO_TEST_APERCU, "Confirmer l’import")
+        AMBLUEO_TEST_FRACTION = [dict(AMBLUEO_TEST_LIGNES[0], montant="300,01"), *AMBLUEO_TEST_LIGNES[1:]]
+        self.assertContains(
+            self.client.post(AMBLUEO_TEST_IMPORT, self.csv_upload(*AMBLUEO_TEST_FRACTION)), "FCFA doit être entier",
+        )
+        AMBLUEO_TEST_APERCU = self.client.post(AMBLUEO_TEST_IMPORT, self.csv_upload(*AMBLUEO_TEST_LIGNES))
+        self.assertContains(AMBLUEO_TEST_APERCU, "Confirmer l’import")
+        self.assertEqual(AMBLUEO_TEST_APERCU.context["totals"]["depense"], Decimal("300"))
+        self.assertFalse(Project.objects.filter(name="Reprise").exists())
+        AMBLUEO_TEST_CONFIRMATION = {"confirm": AMBLUEO_TEST_APERCU.context["token"]}
+        self.assertContains(self.client.post(AMBLUEO_TEST_IMPORT, AMBLUEO_TEST_CONFIRMATION), "4 lignes importées")
+        self.assertContains(self.client.post(AMBLUEO_TEST_IMPORT, AMBLUEO_TEST_CONFIRMATION), "n’est plus disponible")
+        self.assertContains(self.client.post(AMBLUEO_TEST_IMPORT, self.csv_upload(*AMBLUEO_TEST_LIGNES)), "Déjà importée", count=4)
+        AMBLUEO_TEST_MODIFIEES = [dict(AMBLUEO_TEST_LIGNES[0], montant="301"), *AMBLUEO_TEST_LIGNES[1:]]
+        self.assertContains(
+            self.client.post(AMBLUEO_TEST_IMPORT, self.csv_upload(*AMBLUEO_TEST_MODIFIEES)), "contenu différent",
+        )
+        self.assertEqual(ImportLine.objects.count(), 4)
+        self.assertEqual(Audit.objects.filter(action="Import initial CSV").count(), 1)
+        AMBLUEO_TEST_DEPENSE = Operation.objects.get(external_reference="FAC-1")
+        self.assertEqual(finance.budget_summary(AMBLUEO_TEST_DEPENSE.project)["approved"], Decimal("1000"))
+        AMBLUEO_TEST_PAGE = self.client.get(AMBLUEO_TEST_ECHEANCIER)
+        self.assertEqual(AMBLUEO_TEST_PAGE.context["totals"], {"expense": Decimal("300"), "income": Decimal("600")})
+
+        AMBLUEO_TEST_PAIEMENT = finance.post(
+            self.AMBLUEO_TEST_OWNER, AMBLUEO_TEST_DEPENSE.pk, Posting.Kind.PAYMENT, Decimal("120"),
+            timezone.localdate(), uuid.uuid4(),
+        )
+        AMBLUEO_TEST_PAGE = self.client.get(AMBLUEO_TEST_ECHEANCIER, {
+            "counterparty": "fournisseur", "kind": "expense", "project": AMBLUEO_TEST_DEPENSE.project_id,
+            "start": self.AMBLUEO_TEST_DATE, "end": self.AMBLUEO_TEST_DATE,
+        })
+        self.assertEqual(AMBLUEO_TEST_PAGE.context["totals"], {"expense": Decimal("180"), "income": Decimal("0")})
+        self.assertContains(AMBLUEO_TEST_PAGE, "FAC-1")
+        self.assertNotContains(AMBLUEO_TEST_PAGE, "FAC-2")
+        self.client.post(reverse("posting_void", args=[AMBLUEO_TEST_ENTREPRISE, AMBLUEO_TEST_DEPENSE.pk,
+                                                       AMBLUEO_TEST_PAIEMENT.pk]), {"reason": "Correction de test"})
+        self.assertEqual(self.client.get(AMBLUEO_TEST_ECHEANCIER).context["totals"]["expense"], Decimal("300"))
+        self.assertEqual(self.client.post(reverse("operation_reference", args=[AMBLUEO_TEST_ENTREPRISE, AMBLUEO_TEST_DEPENSE.pk]),
+                                          {"counterparty": "Fournisseur B", "external_reference": "FAC-3"}).status_code, 302)
+        self.assertContains(self.client.get(AMBLUEO_TEST_ECHEANCIER), "FAC-3")
+
+        AMBLUEO_TEST_PROJET_AUTRE = self.project(self.AMBLUEO_TEST_OTHER, "Projet confidentiel")
+        self.assertContains(self.client.get(AMBLUEO_TEST_ECHEANCIER, {"project": AMBLUEO_TEST_PROJET_AUTRE.pk}),
+                            "Sélectionnez un choix valide")
+        self.client.force_login(self.AMBLUEO_TEST_MEMBER.user)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_ECHEANCIER).status_code, 403)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_IMPORT).status_code, 403)
+        self.client.force_login(self.AMBLUEO_TEST_OTHER.user)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_ECHEANCIER).status_code, 404)
+        self.assertEqual(self.client.get(AMBLUEO_TEST_IMPORT).status_code, 404)
+
+    def test_initial_import_rolls_back_on_write_failure(self):
+        self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
+        AMBLUEO_TEST_URL = reverse("initial_import", args=[self.AMBLUEO_TEST_A.pk])
+        AMBLUEO_TEST_APERCU = self.client.post(AMBLUEO_TEST_URL, self.csv_upload(
+            dict(type="projet", identifiant="P-1", projet="Reprise atomique", statut="active",
+                 responsable=self.AMBLUEO_TEST_OWNER.user.username, debut=self.AMBLUEO_TEST_DATE,
+                 fin=self.AMBLUEO_TEST_DATE),
+            dict(type="budget", identifiant="B-1", projet="Reprise atomique", montant="1000"),
+            dict(type="depense", identifiant="D-1", projet="Reprise atomique", montant="300",
+                 libelle="Coût à reprendre", categorie="Services", tiers="Fournisseur A", reference="FAC-1",
+                 echeance=self.AMBLUEO_TEST_DATE, date_realisation=self.AMBLUEO_TEST_DATE),
+        ))
+        with patch("pilot.initial_import.finance.post", side_effect=ValidationError("Écriture refusée.")):
+            AMBLUEO_TEST_REPONSE = self.client.post(AMBLUEO_TEST_URL, {"confirm": AMBLUEO_TEST_APERCU.context["token"]})
+        self.assertContains(AMBLUEO_TEST_REPONSE, "Écriture refusée.")
+        for AMBLUEO_TEST_MODELE in (Project, Budget, Operation, Posting, ImportLine, Audit):
+            self.assertFalse(AMBLUEO_TEST_MODELE.objects.exists())
 
     def test_full_financial_recipe(self):
         AMBLUEO_TEST_PROJET = self.project(self.AMBLUEO_TEST_MANAGER, "Infrastructure")

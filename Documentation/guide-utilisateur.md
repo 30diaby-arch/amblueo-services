@@ -32,3 +32,22 @@ les messages figurent par défaut dans les journaux de Django. Lorsque le relais
 SMTP est configuré, le lien de réinitialisation et le lien d’invitation sont
 envoyés par e-mail. Un e-mail est aussi envoyé à la personne qui reçoit une tâche
 ou devient responsable d’un projet.
+
+## Reprendre les données d’un tableur
+
+Le dirigeant peut ouvrir **Importer des données** depuis la fiche entreprise et
+télécharger le modèle CSV. Les lignes s’identifient avec un identifiant stable
+de la source. Le fichier peut réunir des projets, des budgets approuvés, des
+créances et des factures restant à payer. Le nom du projet doit correspondre
+exactement à un projet unique de l’entreprise ou du fichier. Vérifiez les totaux
+et corrigez les erreurs dans le tableur avant de confirmer. Une ligne déjà
+importée avec le même identifiant et les mêmes valeurs est ignorée.
+
+## Suivre les échéances clients et fournisseurs
+
+Depuis la fiche entreprise, **Échéancier** affiche le montant restant exigible,
+les retards et les totaux à payer et à encaisser pour les filtres sélectionnés.
+Ouvrez l’opération pour enregistrer un règlement si votre rôle le permet. Les
+montants tiennent compte des règlements partiels et des corrections. Le
+dirigeant et le financier peuvent renseigner ou corriger le tiers et la
+référence externe dans la fiche opération.

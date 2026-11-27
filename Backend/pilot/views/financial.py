@@ -1,6 +1,7 @@
 import uuid
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.forms import Form
@@ -170,3 +171,49 @@ def opening(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
                 forms.OpeningForm(form_data(AMBLUEO_UI_REQUETE),
                                   instance=CashOpening(company=AMBLUEO_UI_MEMBRE.company),
                                   initial={"date": timezone.localdate()}), save)
+
+
+@login_required
+def schedule(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
+    AMBLUEO_UI_MEMBRE = membership(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_SECURITE_SUIVI)
+    AMBLUEO_UI_FORM = forms.ScheduleForm(AMBLUEO_UI_REQUETE.GET)
+    AMBLUEO_UI_FORM.fields["project"].queryset = Project.objects.filter(
+        company_id=AMBLUEO_UI_ENTREPRISE_ID,
+    ).order_by("name", "pk")
+    AMBLUEO_UI_CTX = {"member": AMBLUEO_UI_MEMBRE, "form": AMBLUEO_UI_FORM, "today": timezone.localdate()}
+    if AMBLUEO_UI_FORM.is_valid():
+        AMBLUEO_UI_DONNEES = AMBLUEO_UI_FORM.cleaned_data
+        AMBLUEO_UI_OPERATIONS = Operation.objects.filter(project__company_id=AMBLUEO_UI_ENTREPRISE_ID)
+        AMBLUEO_UI_FILTRES = {
+            "project": AMBLUEO_UI_DONNEES["project"], "kind": AMBLUEO_UI_DONNEES["kind"],
+            "counterparty__icontains": AMBLUEO_UI_DONNEES["counterparty"],
+            "due__gte": AMBLUEO_UI_DONNEES["start"], "due__lte": AMBLUEO_UI_DONNEES["end"],
+        }
+        AMBLUEO_UI_LIGNES = finance.payment_schedule(AMBLUEO_UI_OPERATIONS.filter(**{
+            AMBLUEO_UI_CLE: AMBLUEO_UI_VALEUR
+            for AMBLUEO_UI_CLE, AMBLUEO_UI_VALEUR in AMBLUEO_UI_FILTRES.items() if AMBLUEO_UI_VALEUR
+        }).select_related("project").order_by("due", "pk"))
+        AMBLUEO_UI_TOTAUX = dict.fromkeys(Operation.Kind.values, finance.AMBLUEO_FINANCE_ZERO)
+        for AMBLUEO_UI_OPERATION, AMBLUEO_UI_RESTE in AMBLUEO_UI_LIGNES:
+            AMBLUEO_UI_TOTAUX[AMBLUEO_UI_OPERATION.kind] += AMBLUEO_UI_RESTE
+        AMBLUEO_UI_CTX.update(
+            page=Paginator(AMBLUEO_UI_LIGNES, 50).get_page(AMBLUEO_UI_REQUETE.GET.get("page")),
+            totals=AMBLUEO_UI_TOTAUX,
+        )
+    return render(AMBLUEO_UI_REQUETE, "pilot/schedule.html", AMBLUEO_UI_CTX)
+
+
+@login_required
+def operation_reference(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OBJET_ID):
+    AMBLUEO_UI_MEMBRE = membership(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_SECURITE_FINANCE)
+    AMBLUEO_UI_OP = get_object_or_404(Operation, project__company_id=AMBLUEO_UI_ENTREPRISE_ID, pk=AMBLUEO_UI_OBJET_ID)
+
+    def save(AMBLUEO_UI_FORMULAIRE):
+        if AMBLUEO_UI_FORMULAIRE.changed_data:
+            AMBLUEO_UI_OP.save(update_fields=AMBLUEO_UI_FORMULAIRE.changed_data)
+            finance.audit(AMBLUEO_UI_MEMBRE, "Modification du tiers", f"Opération {AMBLUEO_UI_OP.pk}")
+        return redirect("operation", AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_UI_OP.pk)
+
+    return edit(AMBLUEO_UI_REQUETE, "Modifier le tiers et la référence", forms.OperationReferenceForm(
+        form_data(AMBLUEO_UI_REQUETE), instance=AMBLUEO_UI_OP,
+    ), save)

@@ -1,0 +1,47 @@
+{% extends "pilot/base.html" %}
+{% block title %}Échéancier · Amblueo Services{% endblock %}
+{% block content %}
+<nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'company' member.company_id %}">{{ member.company }}</a></nav>
+<h1>Échéancier clients et fournisseurs</h1>
+<form method="get">
+    <section class="panel" aria-labelledby="filtres-echeancier">
+        <h2 id="filtres-echeancier">Filtres</h2>
+        <div class="grid export-filters">{{ form.as_div }}</div>
+        <button>Appliquer les filtres</button>
+        <a href="{% url 'schedule' member.company_id %}">Réinitialiser</a>
+    </section>
+</form>
+{% if page != None %}
+<section class="panel" aria-labelledby="echeances">
+    <h2 id="echeances">Échéances ouvertes</h2>
+    <p>Les recettes approuvées et les dépenses réalisées apparaissent tant qu’un montant reste exigible.</p>
+    <div class="grid metrics">
+        <div><span>À encaisser</span><strong>{{ totals.income }} {{ member.company.currency }}</strong></div>
+        <div><span>À payer</span><strong>{{ totals.expense }} {{ member.company.currency }}</strong></div>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="echeances">
+        <table>
+            <thead><tr><th>Échéance</th><th>Opération</th><th>Projet</th><th>Client ou fournisseur</th><th>Référence</th><th class="numeric">Réglé</th><th class="numeric">Reste exigible</th></tr></thead>
+            <tbody>
+                {% for op, remaining in page %}
+                <tr>
+                    <td>{{ op.due }}{% if op.due < today %}<br><span class="alert">En retard</span>{% endif %}</td>
+                    <td><a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }}</a><br>{{ op.get_kind_display }}</td>
+                    <td><a href="{% url 'project' member.company_id op.project_id %}">{{ op.project }}</a></td>
+                    <td>{{ op.counterparty|default:"Non renseigné" }}</td><td>{{ op.external_reference|default:"—" }}</td>
+                    <td class="numeric">{{ op.paid }}</td><td class="numeric">{{ remaining }}</td>
+                </tr>
+                {% empty %}<tr><td colspan="7">Aucune échéance ouverte pour ces filtres.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page.has_other_pages %}
+    <nav class="actions" aria-label="Pages de l’échéancier">
+        {% if page.has_previous %}<a href="{% querystring page=page.previous_page_number %}">Page précédente</a>{% endif %}
+        <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a href="{% querystring page=page.next_page_number %}">Page suivante</a>{% endif %}
+    </nav>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

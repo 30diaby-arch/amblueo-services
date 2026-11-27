@@ -1,0 +1,64 @@
+{% extends "pilot/base.html" %}
+{% block title %}Import initial · Amblueo Services{% endblock %}
+{% block content %}
+<nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'company' member.company_id %}">{{ member.company }}</a></nav>
+<h1>Importer des données</h1>
+<section class="panel">
+    <p>Reprenez des projets, des budgets approuvés et des créances ou factures encore ouvertes en {{ member.company.currency }}.</p>
+    <a href="?modele=1">Télécharger le modèle CSV</a>
+    <details>
+        <summary>Remplir le modèle</summary>
+        <ul>
+            <li>Conservez l’en-tête. Enregistrez en UTF-8, avec le séparateur point-virgule.</li>
+            <li>Pour chaque ligne, indiquez un type, un identifiant stable et le nom exact du projet.</li>
+            <li><code>projet</code> : identifiant de connexion d’un responsable actif, statut <code>planned</code>, <code>active</code> ou <code>closed</code>, dates de début et de fin.</li>
+            <li><code>budget</code> : montant du budget approuvé, pour un projet sans budget dans Amblueo.</li>
+            <li><code>recette</code> ou <code>depense</code> : libellé, catégorie, tiers, référence, échéance et montant encore ouvert. Pour une dépense déjà réalisée, indiquez aussi sa date de réalisation.</li>
+            <li>Utilisez des dates au format AAAA-MM-JJ. Laissez vides les colonnes qui ne concernent pas la ligne. Limite de 500 lignes et 256 Kio.</li>
+        </ul>
+    </details>
+    {% if errors %}<ul class="errorlist" role="alert">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    {% if imported != None %}
+    <p role="status">{{ imported }} ligne{{ imported|pluralize }} importée{{ imported|pluralize }}. {{ skipped }} déjà présente{{ skipped|pluralize }}.
+        <a href="{% url 'schedule' member.company_id %}">Ouvrir l’échéancier</a></p>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button>Prévisualiser le fichier</button>
+    </form>
+</section>
+{% if rows %}
+<section class="panel" aria-labelledby="apercu-import">
+    <h2 id="apercu-import">Aperçu de l’import</h2>
+    <div class="table-wrap" tabindex="0" role="region" aria-labelledby="apercu-import">
+        <table>
+            <thead><tr><th>Ligne</th><th>Type et identifiant</th><th>Projet</th><th>Opération</th><th>Montant</th><th>Échéance</th><th>Résultat</th></tr></thead>
+            <tbody>
+                {% for row, messages in rows %}
+                <tr>
+                    <td>{{ row.line }}</td><td>{{ row.kind }} · {{ row.values.identifiant }}</td><td>{{ row.values.projet }}</td>
+                    <td>{% if row.values.libelle %}{{ row.values.libelle }}<br>{{ row.values.tiers }} · {{ row.values.reference }}{% else %}—{% endif %}</td>
+                    <td>{{ row.values.montant|default:"—" }}</td><td>{{ row.values.echeance|default:"—" }}</td>
+                    <td>{% if messages %}<ul class="errorlist">{% for error in messages %}<li>{{ error }}</li>{% endfor %}</ul>
+                        {% elif row.skipped %}Déjà importée{% else %}Prête à importer{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if token %}
+    <div class="grid metrics">
+        <div><span>Budgets à reprendre</span><strong>{{ totals.budget }} {{ member.company.currency }}</strong></div>
+        <div><span>À encaisser</span><strong>{{ totals.recette }} {{ member.company.currency }}</strong></div>
+        <div><span>À payer</span><strong>{{ totals.depense }} {{ member.company.currency }}</strong></div>
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="confirm" value="{{ token }}">
+        <button>Confirmer l’import</button>
+    </form>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

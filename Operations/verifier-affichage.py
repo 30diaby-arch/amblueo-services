@@ -1,3 +1,5 @@
+import csv
+import io
 import sys
 from pathlib import Path
 from tempfile import mkdtemp
@@ -16,12 +18,46 @@ def verifier_affichage(AMBLUEO_TEST_PAGE, AMBLUEO_TEST_URL):
     AMBLUEO_TEST_PAGE.get_by_role("button", name="Se connecter").click()
     expect(AMBLUEO_TEST_PAGE.get_by_role("heading", name="Mes entreprises")).to_be_visible()
     AMBLUEO_TEST_PAGE.get_by_role("link", name="Atelier Horizon").click()
+    AMBLUEO_TEST_PAGE.get_by_role("link", name="Échéancier", exact=True).click()
+    expect(AMBLUEO_TEST_PAGE.get_by_role("heading", name="Échéancier clients et fournisseurs")).to_be_visible()
+    AMBLUEO_TEST_PAGE.get_by_role("navigation", name="Fil d’Ariane").get_by_role(
+        "link", name="Atelier Horizon",
+    ).click()
+    if AMBLUEO_TEST_PAGE.viewport_size["width"] == 1280:
+        verifier_import(AMBLUEO_TEST_PAGE)
     AMBLUEO_TEST_PAGE.get_by_role("region", name="Projets").get_by_role(
         "link", name="Refonte du site client",
     ).click()
     expect(AMBLUEO_TEST_PAGE.get_by_text("Valider les maquettes", exact=True)).to_be_visible()
     AMBLUEO_TEST_PAGE.get_by_role("link", name="Mot de passe", exact=True).click()
     expect(AMBLUEO_TEST_PAGE.get_by_role("heading", name="Changer le mot de passe")).to_be_visible()
+
+
+def verifier_import(AMBLUEO_TEST_PAGE):
+    AMBLUEO_TEST_PAGE.get_by_role("link", name="Importer des données").click()
+    with AMBLUEO_TEST_PAGE.expect_download() as AMBLUEO_TEST_TELECHARGEMENT:
+        AMBLUEO_TEST_PAGE.get_by_role("link", name="Télécharger le modèle CSV").click()
+    AMBLUEO_TEST_ENTETE = AMBLUEO_TEST_TELECHARGEMENT.value.path().read_text(encoding="utf-8-sig").strip()
+    AMBLUEO_TEST_CSV = io.StringIO()
+    AMBLUEO_TEST_REDAC = csv.DictWriter(AMBLUEO_TEST_CSV, fieldnames=AMBLUEO_TEST_ENTETE.split(";"), delimiter=";")
+    AMBLUEO_TEST_REDAC.writeheader()
+    AMBLUEO_TEST_REDAC.writerow({
+        "type": "recette", "identifiant": "RECETTE-NAV-001", "projet": "Refonte du site client",
+        "montant": "45000", "libelle": "Facture navigateur", "categorie": "Services",
+        "tiers": "Client navigateur", "reference": "FAC-NAV-001", "echeance": "2027-01-15",
+    })
+    AMBLUEO_TEST_PAGE.get_by_label("Fichier CSV").set_input_files({
+        "name": "reprise.csv", "mimeType": "text/csv", "buffer": AMBLUEO_TEST_CSV.getvalue().encode(),
+    })
+    AMBLUEO_TEST_PAGE.get_by_role("button", name="Prévisualiser le fichier").click()
+    expect(AMBLUEO_TEST_PAGE.get_by_text("Prête à importer")).to_be_visible()
+    AMBLUEO_TEST_PAGE.get_by_role("button", name="Confirmer l’import").click()
+    expect(AMBLUEO_TEST_PAGE.get_by_role("status")).to_contain_text("1 ligne importée")
+    AMBLUEO_TEST_PAGE.get_by_role("link", name="Ouvrir l’échéancier").click()
+    expect(AMBLUEO_TEST_PAGE.get_by_role("link", name="Facture navigateur")).to_be_visible()
+    AMBLUEO_TEST_PAGE.get_by_role("navigation", name="Fil d’Ariane").get_by_role(
+        "link", name="Atelier Horizon",
+    ).click()
 
 
 def verifier_courriel(AMBLUEO_TEST_PAGE, AMBLUEO_TEST_HTML, AMBLUEO_TEST_URL):

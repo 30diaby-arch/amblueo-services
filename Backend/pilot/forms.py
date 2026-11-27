@@ -55,7 +55,7 @@ class OpeningForm(forms.ModelForm):
 class OperationForm(forms.ModelForm):
     class Meta:
         model = Operation
-        fields = ["title", "category", "amount", "due", "evidence"]
+        fields = ["title", "category", "counterparty", "external_reference", "amount", "due", "evidence"]
 
     def clean_evidence(self):
         AMBLUEO_FINANCE_DOCUMENT = self.cleaned_data["evidence"]
@@ -90,3 +90,24 @@ class ExportForm(forms.Form):
         if AMBLUEO_EXPORT_DEBUT and AMBLUEO_EXPORT_FIN and AMBLUEO_EXPORT_DEBUT > AMBLUEO_EXPORT_FIN:
             self.add_error("end", "La date de fin doit suivre la date de début.")
         return AMBLUEO_EXPORT_DONNEES
+
+
+class OperationReferenceForm(forms.ModelForm):
+    class Meta:
+        model = Operation
+        fields = ["counterparty", "external_reference"]
+
+
+class ScheduleForm(ExportForm):
+    kind = forms.ChoiceField(label="Type", choices=[("", "Tous les types"), *Operation.Kind.choices], required=False)
+    counterparty = forms.CharField(label="Client ou fournisseur", max_length=150, required=False)
+
+
+class InitialImportForm(forms.Form):
+    file = forms.FileField(label="Fichier CSV", widget=forms.ClearableFileInput(attrs={"accept": ".csv,text/csv"}))
+
+    def clean_file(self):
+        AMBLUEO_IMPORT_FICHIER = self.cleaned_data["file"]
+        if AMBLUEO_IMPORT_FICHIER.size > 256 * 1024:
+            raise forms.ValidationError("Le fichier doit peser au maximum 256 Kio.")
+        return AMBLUEO_IMPORT_FICHIER

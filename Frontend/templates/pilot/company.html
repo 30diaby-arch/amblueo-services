@@ -2,7 +2,8 @@
 <nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'home' %}">Mes entreprises</a></nav>
 <div class="heading"><div><h1>{{ member.company }}</h1><p>{{ member.get_role_display }} · {{ member.company.currency }}</p></div>
 <div class="actions">{% if can_manage %}<a class="button" href="{% url 'project_new' member.company_id %}">Nouveau projet</a>{% endif %}
-{% if can_view_finance %}<a class="button secondary" href="{% url 'export' member.company_id %}">Préparer un export</a>{% endif %}</div></div>
+{% if member.role == "owner" %}<a class="button secondary" href="{% url 'initial_import' member.company_id %}">Importer des données</a>{% endif %}
+{% if can_view_finance %}<a class="button secondary" href="{% url 'schedule' member.company_id %}">Échéancier</a><a class="button secondary" href="{% url 'export' member.company_id %}">Préparer un export</a>{% endif %}</div></div>
 {% include "pilot/company/priorities.html" %}
 {% if setup %}{% include "pilot/company/setup.html" %}{% endif %}
 {% if can_finance %}
