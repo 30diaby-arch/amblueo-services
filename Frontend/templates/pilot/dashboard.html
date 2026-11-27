@@ -63,18 +63,27 @@
         </section>
         <section class="panel" aria-labelledby="dashboard-projets">
             <h2 id="dashboard-projets">Avancement des projets</h2>
-            <p class="helptext">Part des tâches terminées pour chaque projet.</p>
-            <ul class="clean dashboard-progress">
-                {% for project in projects|slice:":6" %}
-                <li><a href="{% url 'project' member.company_id project.pk %}">{{ project.name }}</a>
-                    {% if project.tasks_total %}
-                    <span>{% widthratio project.tasks_done project.tasks_total 100 %} %</span>
-                    <progress max="{{ project.tasks_total }}" value="{{ project.tasks_done }}" aria-label="Tâches terminées pour {{ project.name }}"></progress>
-                    {% else %}<span class="helptext">Aucune tâche</span>{% endif %}
-                </li>
-                {% empty %}<li class="empty">Aucun projet.</li>{% endfor %}
-            </ul>
-            {% if project_count > 6 %}<a href="{% url 'company' member.company_id %}#projets">Voir tous les projets</a>{% endif %}
+            <p class="helptext">Répartition des tâches des six premiers projets avec des tâches, classés par date de fin.</p>
+            {% if has_progress %}<div id="dashboard-projets-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>{% endif %}
+            {% if projects %}
+            <details><summary>Voir tous les projets ({{ project_count }})</summary>
+                <div class="table-wrap" tabindex="0" role="region" aria-label="Détail de l’avancement">
+                    <table>
+                        <thead><tr><th scope="col">Projet</th><th scope="col">Fin</th><th scope="col">À faire</th><th scope="col">En cours</th><th scope="col">Terminées</th><th scope="col">En retard</th><th scope="col">Avancement</th></tr></thead>
+                        <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <th scope="row"><a href="{% url 'project' member.company_id project.pk %}">{{ project.name }}</a><br><small>{{ project.get_status_display }}</small></th>
+                            <td>{{ project.end }}</td><td>{{ project.tasks_todo }}</td><td>{{ project.tasks_doing }}</td>
+                            <td>{{ project.tasks_done }}</td><td>{{ project.tasks_late }}</td>
+                            <td>{% if project.tasks_total %}{% widthratio project.tasks_done project.tasks_total 100 %} %{% else %}Aucune tâche{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+            {% else %}<p class="empty">Aucun projet.</p>{% endif %}
         </section>
         <section class="panel" aria-labelledby="dashboard-budgets">
             <h2 id="dashboard-budgets">Répartition du budget</h2>
@@ -94,6 +103,13 @@
         </section>
         <section class="panel" aria-labelledby="dashboard-alertes">
             <h2 id="dashboard-alertes">Alertes</h2>
+            {% if alerts %}
+            <div id="dashboard-alertes-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
+            <ul class="clean dashboard-alert-counts" aria-label="Nombre d’alertes par catégorie">
+                {% for alert in alerts %}<li>{{ alert.label }} <strong>{{ alert.count }}</strong></li>{% endfor %}
+            </ul>
+            <h3>À examiner en priorité</h3>
+            {% endif %}
             <ul class="clean dashboard-alerts">
                 {% if cash.forecast < 0 %}<li><strong>Trésorerie</strong><a href="{% url 'company' member.company_id %}">Solde prévisionnel négatif · {{ cash.forecast }} {{ currency }}</a></li>{% endif %}
                 {% for project, stats in risks|slice:":5" %}
@@ -105,8 +121,11 @@
                 {% for op in pending %}
                 <li><strong>Validation</strong><a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ op.amount }} {{ currency }}</a></li>
                 {% endfor %}
+                {% for task in late_tasks %}
+                <li><strong>Tâche</strong><a href="{% url 'project' member.company_id task.project_id %}#tâches">{{ task.title }} · {{ task.project }} · {{ task.end }}</a></li>
+                {% endfor %}
             </ul>
-            {% if not risks and not overdue and not pending and not cash.forecast < 0 %}<p class="empty">Aucune alerte à traiter.</p>{% endif %}
+            {% if not alerts %}<p class="empty">Aucune alerte à traiter.</p>{% endif %}
             <div class="actions"><a href="{% url 'schedule' member.company_id %}">Ouvrir l’échéancier</a><a href="{% url 'company' member.company_id %}#priorites">Voir les actions à traiter</a></div>
         </section>
         <section class="panel dashboard-deadlines" aria-labelledby="dashboard-echeances">
@@ -116,18 +135,30 @@
             <div id="dashboard-echeances-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
             <div class="table-wrap" tabindex="0" role="region" aria-label="Échéances par horizon">
                 <table>
-                    <thead><tr><th scope="col">Horizon</th><th scope="col">À encaisser</th><th scope="col">À payer</th></tr></thead>
+                    <thead><tr><th scope="col">Horizon</th><th scope="col">À encaisser</th><th scope="col">À payer</th><th scope="col">Écart net</th></tr></thead>
                     <tbody>
                     {% for row in deadlines %}
                     <tr>
                         <th scope="row">{{ row.label }}</th>
-                        <td>{% if row.income %}<a href="{% url 'schedule' member.company_id %}?kind=income{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À encaisser, {{ row.label }} : {{ row.income }} {{ currency }}">{{ row.income }} {{ currency }}</a>{% else %}—{% endif %}</td>
-                        <td>{% if row.expense %}<a href="{% url 'schedule' member.company_id %}?kind=expense{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À payer, {{ row.label }} : {{ row.expense }} {{ currency }}">{{ row.expense }} {{ currency }}</a>{% else %}—{% endif %}</td>
+                        <td>{% if row.income %}<a href="{% url 'schedule' member.company_id %}?kind=income{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À encaisser, {{ row.label }} : {{ row.income }} {{ currency }}">{{ row.income }} {{ currency }}</a><br><small>{{ row.income_count }} opération{{ row.income_count|pluralize }}</small>{% else %}—{% endif %}</td>
+                        <td>{% if row.expense %}<a href="{% url 'schedule' member.company_id %}?kind=expense{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À payer, {{ row.label }} : {{ row.expense }} {{ currency }}">{{ row.expense }} {{ currency }}</a><br><small>{{ row.expense_count }} opération{{ row.expense_count|pluralize }}</small>{% else %}—{% endif %}</td>
+                        <td>{{ row.net }} {{ currency }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {% if upcoming %}
+            <h3>Prochaines échéances</h3>
+            <ul class="clean dashboard-alerts">
+                {% for op, amount in upcoming %}
+                <li><time datetime="{{ op.due|date:'Y-m-d' }}">{{ op.due }}</time>
+                    <a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }}</a>
+                    <small>{{ op.get_kind_display }} · {{ op.counterparty|default:op.project.name }}</small>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
             {% else %}<p class="empty">Aucune échéance ouverte sur cet horizon.</p>{% endif %}
         </section>
     </div>

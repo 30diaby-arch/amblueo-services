@@ -86,3 +86,12 @@ comparer son montant avec **Voir les montants par période**. Vérifier que
 l’anneau correspond aux budgets approuvés. Dans **Échéances à traiter**,
 ouvrir un montant à payer ou à encaisser et vérifier que l’échéancier conserve
 le type et l’horizon sélectionnés.
+
+Dans **Avancement des projets**, comparer les effectifs des tâches à faire,
+en cours, terminées et en retard avec la fiche projet. Une tâche en retard
+reste comptée dans son état d’avancement. Ouvrir le détail pour vérifier un
+projet sans tâche. Dans **Alertes**, rapprocher les compteurs par catégorie
+avec les listes source, y compris les tâches en retard. Dans **Échéances à
+traiter**, vérifier le nombre d’opérations et l’écart entre les montants à
+encaisser et à payer. Ouvrir une prochaine échéance pour vérifier son montant
+restant et le tiers.

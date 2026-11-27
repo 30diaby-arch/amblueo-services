@@ -9,7 +9,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_safe
 
 from .. import finance
-from ..models import Operation, Posting, Project
+from ..models import Operation, Posting, Project, Task
 from .common import AMBLUEO_SECURITE_FINANCE, membership
 
 
@@ -69,6 +69,7 @@ def echeances(AMBLUEO_DASHBOARD_ENTREPRISE, AMBLUEO_DASHBOARD_JOUR):
     AMBLUEO_DASHBOARD_SEMAINE = AMBLUEO_DASHBOARD_JOUR + timedelta(days=7)
     AMBLUEO_DASHBOARD_HORIZON = AMBLUEO_DASHBOARD_JOUR + timedelta(days=30)
     AMBLUEO_DASHBOARD_RETARDS = []
+    AMBLUEO_DASHBOARD_PROCHAINES = []
     AMBLUEO_DASHBOARD_TRANCHES = [
         {"label": "En retard", "end": AMBLUEO_DASHBOARD_JOUR - timedelta(days=1)},
         {"label": "De J à J+7", "start": AMBLUEO_DASHBOARD_JOUR, "end": AMBLUEO_DASHBOARD_SEMAINE},
@@ -77,16 +78,22 @@ def echeances(AMBLUEO_DASHBOARD_ENTREPRISE, AMBLUEO_DASHBOARD_JOUR):
     ]
     for AMBLUEO_DASHBOARD_TRANCHE in AMBLUEO_DASHBOARD_TRANCHES:
         AMBLUEO_DASHBOARD_TRANCHE.update(dict.fromkeys(Operation.Kind.values, finance.AMBLUEO_FINANCE_ZERO))
+        AMBLUEO_DASHBOARD_TRANCHE.update(income_count=0, expense_count=0)
     for AMBLUEO_DASHBOARD_OPERATION, AMBLUEO_DASHBOARD_RESTE in finance.payment_schedule(Operation.objects.filter(
         project__company=AMBLUEO_DASHBOARD_ENTREPRISE, due__lte=AMBLUEO_DASHBOARD_HORIZON,
     ).select_related("project").order_by("due", "pk")):
         if AMBLUEO_DASHBOARD_OPERATION.due < AMBLUEO_DASHBOARD_JOUR:
             AMBLUEO_DASHBOARD_RETARDS.append((AMBLUEO_DASHBOARD_OPERATION, AMBLUEO_DASHBOARD_RESTE))
+        elif len(AMBLUEO_DASHBOARD_PROCHAINES) < 5:
+            AMBLUEO_DASHBOARD_PROCHAINES.append((AMBLUEO_DASHBOARD_OPERATION, AMBLUEO_DASHBOARD_RESTE))
         for AMBLUEO_DASHBOARD_TRANCHE in AMBLUEO_DASHBOARD_TRANCHES:
             if AMBLUEO_DASHBOARD_OPERATION.due <= AMBLUEO_DASHBOARD_TRANCHE["end"]:
                 AMBLUEO_DASHBOARD_TRANCHE[AMBLUEO_DASHBOARD_OPERATION.kind] += AMBLUEO_DASHBOARD_RESTE
+                AMBLUEO_DASHBOARD_TRANCHE[f"{AMBLUEO_DASHBOARD_OPERATION.kind}_count"] += 1
                 break
-    return AMBLUEO_DASHBOARD_TRANCHES, AMBLUEO_DASHBOARD_RETARDS
+    for AMBLUEO_DASHBOARD_TRANCHE in AMBLUEO_DASHBOARD_TRANCHES:
+        AMBLUEO_DASHBOARD_TRANCHE["net"] = AMBLUEO_DASHBOARD_TRANCHE["income"] - AMBLUEO_DASHBOARD_TRANCHE["expense"]
+    return AMBLUEO_DASHBOARD_TRANCHES, AMBLUEO_DASHBOARD_RETARDS, AMBLUEO_DASHBOARD_PROCHAINES
 
 
 def graphique_budget(AMBLUEO_DASHBOARD_BUDGETS):
@@ -119,6 +126,9 @@ def overview(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
     AMBLUEO_UI_PROJETS = Project.objects.filter(company_id=AMBLUEO_UI_ENTREPRISE_ID).annotate(
         tasks_total=Count("task"),
         tasks_done=Count("task", filter=Q(task__status="done")),
+        tasks_doing=Count("task", filter=Q(task__status="doing")),
+        tasks_todo=Count("task", filter=Q(task__status="todo")),
+        tasks_late=Count("task", filter=Q(task__end__lt=AMBLUEO_UI_JOUR) & ~Q(task__status="done")),
     ).order_by("end", "pk")
     AMBLUEO_UI_BUDGETS = [(AMBLUEO_UI_PROJET, finance.budget_summary(AMBLUEO_UI_PROJET))
                           for AMBLUEO_UI_PROJET in AMBLUEO_UI_PROJETS]
@@ -128,22 +138,46 @@ def overview(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
     AMBLUEO_UI_TOTAL_BUDGET = sum(
         (AMBLUEO_UI_STATS["approved"] for _, AMBLUEO_UI_STATS in AMBLUEO_UI_BUDGETS), finance.AMBLUEO_FINANCE_ZERO,
     )
-    AMBLUEO_UI_TRANCHES, AMBLUEO_UI_RETARDS = echeances(AMBLUEO_UI_MEMBRE.company, AMBLUEO_UI_JOUR)
+    AMBLUEO_UI_TRANCHES, AMBLUEO_UI_RETARDS, AMBLUEO_UI_PROCHAINES = echeances(
+        AMBLUEO_UI_MEMBRE.company, AMBLUEO_UI_JOUR,
+    )
     AMBLUEO_UI_DEPENSES = Operation.objects.filter(
         project__company_id=AMBLUEO_UI_ENTREPRISE_ID, kind=Operation.Kind.EXPENSE, state=Operation.State.SUBMITTED,
     ).select_related("project").order_by("due", "pk")
+    AMBLUEO_UI_TACHES_RETARD = Task.objects.filter(
+        project__company_id=AMBLUEO_UI_ENTREPRISE_ID, end__lt=AMBLUEO_UI_JOUR,
+    ).exclude(status="done").select_related("project").order_by("end", "pk")
+    AMBLUEO_UI_TRESORERIE = finance.cash_summary(AMBLUEO_UI_MEMBRE.company)
+    AMBLUEO_UI_ALERTES = [
+        {"label": "Trésorerie négative", "count": int(bool(
+            AMBLUEO_UI_TRESORERIE and AMBLUEO_UI_TRESORERIE["forecast"] < 0
+        ))},
+        {"label": "Budgets à risque", "count": len(AMBLUEO_UI_RISQUES)},
+        {"label": "Échéances en retard", "count": len(AMBLUEO_UI_RETARDS)},
+        {"label": "Dépenses à valider", "count": AMBLUEO_UI_DEPENSES.count()},
+        {"label": "Tâches en retard", "count": sum(AMBLUEO_UI_PROJET.tasks_late for AMBLUEO_UI_PROJET in AMBLUEO_UI_PROJETS)},
+    ]
+    AMBLUEO_UI_ALERTES = [AMBLUEO_UI_ALERTE for AMBLUEO_UI_ALERTE in AMBLUEO_UI_ALERTES if AMBLUEO_UI_ALERTE["count"]]
+    AMBLUEO_UI_AVANCEMENT = [
+        {"label": AMBLUEO_UI_PROJET.name, "done": AMBLUEO_UI_PROJET.tasks_done,
+         "doing": AMBLUEO_UI_PROJET.tasks_doing, "todo": AMBLUEO_UI_PROJET.tasks_todo}
+        for AMBLUEO_UI_PROJET in AMBLUEO_UI_PROJETS if AMBLUEO_UI_PROJET.tasks_total
+    ][:6]
     return render(AMBLUEO_UI_REQUETE, "pilot/dashboard.html", {
         "member": AMBLUEO_UI_MEMBRE, "today": AMBLUEO_UI_JOUR, "period_start": AMBLUEO_UI_DEBUT,
         "period": AMBLUEO_UI_PERIODE, "periods": AMBLUEO_DASHBOARD_PERIODES,
         "flow": AMBLUEO_UI_FLUX, "totals": AMBLUEO_UI_TOTAUX,
-        "cash": finance.cash_summary(AMBLUEO_UI_MEMBRE.company),
+        "cash": AMBLUEO_UI_TRESORERIE,
         "projects": AMBLUEO_UI_PROJETS, "project_count": len(AMBLUEO_UI_PROJETS),
         "budgets": AMBLUEO_UI_BUDGETS, "budget_total": AMBLUEO_UI_TOTAL_BUDGET,
         "risks": AMBLUEO_UI_RISQUES, "overdue": AMBLUEO_UI_RETARDS, "pending": AMBLUEO_UI_DEPENSES[:5],
-        "deadlines": AMBLUEO_UI_TRANCHES,
+        "deadlines": AMBLUEO_UI_TRANCHES, "upcoming": AMBLUEO_UI_PROCHAINES,
+        "alerts": AMBLUEO_UI_ALERTES, "late_tasks": AMBLUEO_UI_TACHES_RETARD[:5],
+        "has_progress": bool(AMBLUEO_UI_AVANCEMENT),
         "has_deadlines": any(
             AMBLUEO_UI_TRANCHE["income"] or AMBLUEO_UI_TRANCHE["expense"] for AMBLUEO_UI_TRANCHE in AMBLUEO_UI_TRANCHES
         ),
         "chart_data": {"currency": AMBLUEO_UI_MEMBRE.company.currency, "flow": AMBLUEO_UI_FLUX,
-                       "budgets": graphique_budget(AMBLUEO_UI_BUDGETS), "deadlines": AMBLUEO_UI_TRANCHES},
+                       "budgets": graphique_budget(AMBLUEO_UI_BUDGETS), "deadlines": AMBLUEO_UI_TRANCHES,
+                       "progress": AMBLUEO_UI_AVANCEMENT, "alerts": AMBLUEO_UI_ALERTES},
     })

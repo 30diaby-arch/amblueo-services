@@ -383,3 +383,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--AMBLUEO_UI_PRIMAIR
 .dashboard-donut { height: 12rem; }
 .dashboard-deadlines { grid-column: 1 / -1; }
 .dashboard-deadlines .table-wrap { margin-top: .75rem; }
+.dashboard-alert-counts { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.dashboard-alert-counts li { background: var(--AMBLUEO_UI_TEINTE); padding: .35rem .6rem; border-radius: .4rem; font-size: .875rem; }
+.dashboard-alert-counts strong { color: var(--AMBLUEO_UI_DANGER); }
+.dashboard-deadlines .dashboard-alerts li { flex-wrap: wrap; }

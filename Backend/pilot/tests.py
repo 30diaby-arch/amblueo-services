@@ -300,9 +300,18 @@ class PilotTest(TestCase):
         self.assertEqual(AMBLUEO_TEST_PAGE.context["totals"], {"income": Decimal("200"), "expense": Decimal("50")})
         self.assertEqual(AMBLUEO_TEST_PAGE.context["cash"]["current"], Decimal("250"))
         self.assertEqual(AMBLUEO_TEST_PAGE.context["projects"][0].tasks_done, 1)
+        self.assertEqual(AMBLUEO_TEST_PAGE.context["chart_data"]["progress"], [
+            {"label": "Projet de pilotage", "done": 1, "doing": 0, "todo": 0},
+        ])
+        self.assertIn({"label": "Échéances en retard", "count": 1}, AMBLUEO_TEST_PAGE.context["alerts"])
+        self.assertIn({"label": "Budgets à risque", "count": 1}, AMBLUEO_TEST_PAGE.context["alerts"])
+        self.assertContains(AMBLUEO_TEST_PAGE, "Écart net")
+        self.assertEqual(AMBLUEO_TEST_PAGE.context["upcoming"], [(AMBLUEO_TEST_DEPENSE, Decimal("50"))])
         AMBLUEO_TEST_TRANCHES = AMBLUEO_TEST_PAGE.context["deadlines"]
         self.assertEqual(AMBLUEO_TEST_TRANCHES[0]["income"], Decimal("270"))
         self.assertEqual(AMBLUEO_TEST_TRANCHES[1]["expense"], Decimal("50"))
+        self.assertEqual(AMBLUEO_TEST_TRANCHES[0]["income_count"], 1)
+        self.assertEqual(AMBLUEO_TEST_TRANCHES[1]["net"], Decimal("-50"))
         self.assertEqual(AMBLUEO_TEST_PAGE.context["chart_data"]["budgets"], [
             {"label": "Projet de pilotage", "amount": Decimal("1000")},
         ])
