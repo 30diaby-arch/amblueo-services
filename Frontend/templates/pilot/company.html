@@ -1,18 +1,6 @@
 {% extends "pilot/base.html" %}{% block title %}{{ member.company }} · Amblueo Services{% endblock %}{% block content %}
 <div class="workspace-layout">
-    <nav class="workspace-navigation" aria-label="Fonctions de l’entreprise">
-        <a class="workspace-overview" href="#entreprise">Vue d’ensemble</a>
-        {% if can_finance %}<a href="{% url 'dashboard' member.company_id %}">Tableau de bord</a>{% endif %}
-        <a href="#projets">Projets</a>
-        {% if can_manage %}<a href="{% url 'project_new' member.company_id %}">Nouveau projet</a>{% endif %}
-        {% if can_view_finance %}
-            <a href="#budgets-par-projet">Budgets par projet</a>
-            <a href="{% url 'schedule' member.company_id %}">Échéancier</a>
-            <a href="{% url 'export' member.company_id %}">Préparer un export</a>
-        {% endif %}
-        {% if can_finance %}<a href="#historique">Historique</a>{% endif %}
-        {% if member.role == "owner" %}<a href="{% url 'initial_import' member.company_id %}">Importer des données</a>{% endif %}
-    </nav>
+    {% include "pilot/company/navigation.html" %}
     <div class="workspace-content">
         <nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'home' %}">Mes entreprises</a></nav>
         <header id="entreprise">
@@ -60,7 +48,6 @@
         {% if member.role == "owner" %}<section class="panel"><div class="heading"><h2>Équipe</h2><a class="button secondary compact" href="{% url 'invite' member.company_id %}">Inviter un membre</a></div>
         <ul class="clean">{% for item in team %}<li>{{ item.user.get_username }} · {{ item.get_role_display }}
         {% if item.active and item.role != "owner" %}<form class="inline" action="{% url 'deactivate' member.company_id item.pk %}" method="post">{% csrf_token %}<button class="quiet">Désactiver</button></form>{% elif not item.active %} · Désactivé{% endif %}</li>{% endfor %}</ul></section>{% endif %}
-        {% if can_finance %}{% include "pilot/company/history.html" %}{% endif %}
     </div>
 </div>
 {% endblock %}

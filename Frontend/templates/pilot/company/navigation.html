@@ -1,0 +1,13 @@
+<nav class="workspace-navigation" aria-label="Fonctions de l’entreprise">
+    <a {% if request.resolver_match.url_name == 'company' %}class="workspace-overview" aria-current="page"{% endif %} href="{% url 'company' member.company_id %}#entreprise">Vue d’ensemble</a>
+    {% if can_finance %}<a href="{% url 'dashboard' member.company_id %}">Tableau de bord</a>{% endif %}
+    <a href="{% url 'company' member.company_id %}#projets">Projets</a>
+    {% if can_manage %}<a href="{% url 'project_new' member.company_id %}">Nouveau projet</a>{% endif %}
+    {% if can_view_finance %}
+        <a href="{% url 'company' member.company_id %}#budgets-par-projet">Budgets par projet</a>
+        <a href="{% url 'schedule' member.company_id %}">Échéancier</a>
+        <a href="{% url 'export' member.company_id %}">Préparer un export</a>
+    {% endif %}
+    {% if can_finance %}<a {% if request.resolver_match.url_name == 'company_history' %}class="workspace-overview" aria-current="page"{% endif %} href="{% url 'company_history' member.company_id %}">Historique</a>{% endif %}
+    {% if member.role == "owner" %}<a href="{% url 'initial_import' member.company_id %}">Importer des données</a>{% endif %}
+</nav>

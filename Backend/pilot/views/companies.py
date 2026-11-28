@@ -87,21 +87,6 @@ def company(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
             kind=Operation.Kind.EXPENSE, state=Operation.State.SUBMITTED,
         ).select_related("project").order_by("due", "pk")
         AMBLUEO_UI_CTX["cash"] = finance.cash_summary(AMBLUEO_UI_MEMBRE.company)
-        AMBLUEO_UI_HISTORIQUE = Audit.objects.filter(
-            company_id=AMBLUEO_UI_ENTREPRISE_ID,
-        ).select_related("actor")
-        AMBLUEO_UI_RECHERCHE = AMBLUEO_UI_REQUETE.GET.get("audit_q", "").strip()
-        if AMBLUEO_UI_RECHERCHE:
-            AMBLUEO_UI_HISTORIQUE = AMBLUEO_UI_HISTORIQUE.filter(
-                Q(actor__username__icontains=AMBLUEO_UI_RECHERCHE)
-                | Q(action__icontains=AMBLUEO_UI_RECHERCHE)
-                | Q(target__icontains=AMBLUEO_UI_RECHERCHE)
-                | Q(reason__icontains=AMBLUEO_UI_RECHERCHE)
-            )
-        AMBLUEO_UI_CTX["audit_query"] = AMBLUEO_UI_RECHERCHE
-        AMBLUEO_UI_CTX["audit_log"] = Paginator(AMBLUEO_UI_HISTORIQUE, 20).get_page(
-            AMBLUEO_UI_REQUETE.GET.get("audit_page"),
-        )
     if AMBLUEO_UI_MEMBRE.role == Role.OWNER:
         AMBLUEO_UI_CTX["team"] = Membership.objects.filter(company_id=AMBLUEO_UI_ENTREPRISE_ID).select_related("user")
         AMBLUEO_UI_PREMIER = next(iter(AMBLUEO_UI_PROJETS), None)
@@ -114,6 +99,33 @@ def company(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
                 cash_done=AMBLUEO_UI_CTX["cash"] is not None,
             )
     return render(AMBLUEO_UI_REQUETE, "pilot/company.html", AMBLUEO_UI_CTX)
+
+
+@login_required
+def company_history(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID):
+    AMBLUEO_UI_MEMBRE = membership(AMBLUEO_UI_REQUETE, AMBLUEO_UI_ENTREPRISE_ID, AMBLUEO_SECURITE_FINANCE)
+    AMBLUEO_UI_CTX = dict(
+        member=AMBLUEO_UI_MEMBRE,
+        can_manage=AMBLUEO_UI_MEMBRE.role in AMBLUEO_SECURITE_GESTION,
+        can_finance=True,
+        can_view_finance=AMBLUEO_UI_MEMBRE.role in AMBLUEO_SECURITE_SUIVI,
+    )
+    AMBLUEO_UI_HISTORIQUE = Audit.objects.filter(
+        company_id=AMBLUEO_UI_ENTREPRISE_ID,
+    ).select_related("actor")
+    AMBLUEO_UI_RECHERCHE = AMBLUEO_UI_REQUETE.GET.get("audit_q", "").strip()
+    if AMBLUEO_UI_RECHERCHE:
+        AMBLUEO_UI_HISTORIQUE = AMBLUEO_UI_HISTORIQUE.filter(
+            Q(actor__username__icontains=AMBLUEO_UI_RECHERCHE)
+            | Q(action__icontains=AMBLUEO_UI_RECHERCHE)
+            | Q(target__icontains=AMBLUEO_UI_RECHERCHE)
+            | Q(reason__icontains=AMBLUEO_UI_RECHERCHE)
+        )
+    AMBLUEO_UI_CTX["audit_query"] = AMBLUEO_UI_RECHERCHE
+    AMBLUEO_UI_CTX["audit_log"] = Paginator(AMBLUEO_UI_HISTORIQUE, 20).get_page(
+        AMBLUEO_UI_REQUETE.GET.get("audit_page"),
+    )
+    return render(AMBLUEO_UI_REQUETE, "pilot/company/history.html", AMBLUEO_UI_CTX)
 
 
 @login_required

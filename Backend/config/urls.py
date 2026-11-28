@@ -19,6 +19,7 @@ urlpatterns = [
     path("e/nouvelle/", companies.company_new, name="company_new"),
     path("invitation/<str:AMBLUEO_SECURITE_JETON>/", companies.accept, name="accept"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/", companies.company, name="company"),
+    path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/historique/", companies.company_history, name="company_history"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/inviter/", companies.invite, name="invite"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/membre/<int:AMBLUEO_UI_OBJET_ID>/desactiver/", companies.deactivate, name="deactivate"),
     path("e/<int:AMBLUEO_UI_ENTREPRISE_ID>/projet/nouveau/", projects.project_edit, name="project_new"),

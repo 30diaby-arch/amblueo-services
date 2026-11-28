@@ -49,12 +49,15 @@ class PilotTest(TestCase):
             finance.audit(self.AMBLUEO_TEST_FIN, "Approbation", f"Projet {AMBLUEO_TEST_INDEX}", "Revue du budget")
         finance.audit(self.AMBLUEO_TEST_OTHER, "Approbation", "Projet confidentiel", "Revue du budget")
         finance.audit(self.AMBLUEO_TEST_FIN, "Soumission", "Opération hors recherche")
-        AMBLUEO_TEST_URL = reverse("company", args=[self.AMBLUEO_TEST_A.pk])
+        AMBLUEO_TEST_URL = reverse("company_history", args=[self.AMBLUEO_TEST_A.pk])
 
         self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
+        AMBLUEO_TEST_ENTREPRISE = self.client.get(reverse("company", args=[self.AMBLUEO_TEST_A.pk]))
+        self.assertContains(AMBLUEO_TEST_ENTREPRISE, f'href="{AMBLUEO_TEST_URL}"')
+        self.assertNotContains(AMBLUEO_TEST_ENTREPRISE, "Historique des actions")
         AMBLUEO_TEST_RESULTAT = self.client.get(AMBLUEO_TEST_URL, {"audit_q": "Revue du budget"})
         self.assertEqual(AMBLUEO_TEST_RESULTAT.context["audit_log"].paginator.count, 21)
-        self.assertContains(AMBLUEO_TEST_RESULTAT, "audit_q=Revue+du+budget&amp;audit_page=2#historique")
+        self.assertContains(AMBLUEO_TEST_RESULTAT, "audit_q=Revue+du+budget&amp;audit_page=2")
         self.assertNotContains(AMBLUEO_TEST_RESULTAT, "Projet confidentiel")
         self.assertNotContains(AMBLUEO_TEST_RESULTAT, "Opération hors recherche")
         AMBLUEO_TEST_RESULTAT = self.client.get(AMBLUEO_TEST_URL, {"audit_q": "Revue du budget", "audit_page": 2})
@@ -62,7 +65,8 @@ class PilotTest(TestCase):
                           AMBLUEO_TEST_RESULTAT.context["audit_log"]], ["Projet 0"])
 
         self.client.force_login(self.AMBLUEO_TEST_MANAGER.user)
-        self.assertNotContains(self.client.get(AMBLUEO_TEST_URL, {"audit_q": "Revue du budget"}), "Historique des actions")
+        self.assertEqual(self.client.get(AMBLUEO_TEST_URL).status_code, 403)
+        self.assertEqual(self.client.get(reverse("company_history", args=[self.AMBLUEO_TEST_B.pk])).status_code, 404)
 
     def test_company_invitation_deactivation_and_reset(self):
         self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
