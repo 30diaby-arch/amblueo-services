@@ -8,7 +8,7 @@
         <h2 id="filtres-echeancier">Filtres</h2>
         <div class="grid export-filters">{{ form.as_div }}</div>
         <button>Appliquer les filtres</button>
-        <a href="{% url 'schedule' member.company_id %}">Réinitialiser</a>
+        <a class="button secondary compact" href="{% url 'schedule' member.company_id %}">Réinitialiser</a>
     </section>
 </form>
 {% if page != None %}
@@ -26,8 +26,8 @@
                 {% for op, remaining in page %}
                 <tr>
                     <td>{{ op.due }}{% if op.due < today %}<br><span class="alert">En retard</span>{% endif %}</td>
-                    <td><a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }}</a><br>{{ op.get_kind_display }}</td>
-                    <td><a href="{% url 'project' member.company_id op.project_id %}">{{ op.project }}</a></td>
+                    <td><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }}</a><br>{{ op.get_kind_display }}</td>
+                    <td><a class="button secondary compact" href="{% url 'project' member.company_id op.project_id %}">{{ op.project }}</a></td>
                     <td>{{ op.counterparty|default:"Non renseigné" }}</td><td>{{ op.external_reference|default:"—" }}</td>
                     <td class="numeric">{{ op.paid }}</td><td class="numeric">{{ remaining }}</td>
                 </tr>
@@ -37,9 +37,9 @@
     </div>
     {% if page.has_other_pages %}
     <nav class="actions" aria-label="Pages de l’échéancier">
-        {% if page.has_previous %}<a href="{% querystring page=page.previous_page_number %}">Page précédente</a>{% endif %}
+        {% if page.has_previous %}<a class="button secondary compact" href="{% querystring page=page.previous_page_number %}">Page précédente</a>{% endif %}
         <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
-        {% if page.has_next %}<a href="{% querystring page=page.next_page_number %}">Page suivante</a>{% endif %}
+        {% if page.has_next %}<a class="button secondary compact" href="{% querystring page=page.next_page_number %}">Page suivante</a>{% endif %}
     </nav>
     {% endif %}
 </section>

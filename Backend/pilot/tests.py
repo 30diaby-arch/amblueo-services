@@ -44,6 +44,26 @@ class PilotTest(TestCase):
         return Project.objects.create(company=AMBLUEO_TEST_MEMBRE.company, owner=AMBLUEO_TEST_MEMBRE,
             name=AMBLUEO_TEST_NOM, start=self.AMBLUEO_TEST_DATE, end=self.AMBLUEO_TEST_DATE, status="active")
 
+    def test_company_history_search_paginates_and_respects_access(self):
+        for AMBLUEO_TEST_INDEX in range(21):
+            finance.audit(self.AMBLUEO_TEST_FIN, "Approbation", f"Projet {AMBLUEO_TEST_INDEX}", "Revue du budget")
+        finance.audit(self.AMBLUEO_TEST_OTHER, "Approbation", "Projet confidentiel", "Revue du budget")
+        finance.audit(self.AMBLUEO_TEST_FIN, "Soumission", "Opération hors recherche")
+        AMBLUEO_TEST_URL = reverse("company", args=[self.AMBLUEO_TEST_A.pk])
+
+        self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
+        AMBLUEO_TEST_RESULTAT = self.client.get(AMBLUEO_TEST_URL, {"audit_q": "Revue du budget"})
+        self.assertEqual(AMBLUEO_TEST_RESULTAT.context["audit_log"].paginator.count, 21)
+        self.assertContains(AMBLUEO_TEST_RESULTAT, "audit_q=Revue+du+budget&amp;audit_page=2#historique")
+        self.assertNotContains(AMBLUEO_TEST_RESULTAT, "Projet confidentiel")
+        self.assertNotContains(AMBLUEO_TEST_RESULTAT, "Opération hors recherche")
+        AMBLUEO_TEST_RESULTAT = self.client.get(AMBLUEO_TEST_URL, {"audit_q": "Revue du budget", "audit_page": 2})
+        self.assertEqual([AMBLUEO_TEST_AUDIT.target for AMBLUEO_TEST_AUDIT in
+                          AMBLUEO_TEST_RESULTAT.context["audit_log"]], ["Projet 0"])
+
+        self.client.force_login(self.AMBLUEO_TEST_MANAGER.user)
+        self.assertNotContains(self.client.get(AMBLUEO_TEST_URL, {"audit_q": "Revue du budget"}), "Historique des actions")
+
     def test_company_invitation_deactivation_and_reset(self):
         self.client.force_login(self.AMBLUEO_TEST_OWNER.user)
         self.assertEqual(self.client.post(reverse("company_new"), {"name": "Nouvelle", "currency": "EUR"}).status_code, 302)

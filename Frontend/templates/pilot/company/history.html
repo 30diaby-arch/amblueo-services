@@ -1,0 +1,57 @@
+<section class="panel audit-panel" id="historique" aria-labelledby="historique-titre">
+    <h2 id="historique-titre">Historique des actions</h2>
+    <form class="audit-search" method="get" action="#historique">
+        <div>
+            <label for="audit-q">Rechercher par auteur, action, objet ou motif</label>
+            <input id="audit-q" name="audit_q" type="search" value="{{ audit_query }}">
+        </div>
+        <div class="actions">
+            <button type="submit">Rechercher</button>
+            {% if audit_query %}
+                <a class="button secondary" href="{% url 'company' member.company_id %}#historique">Réinitialiser</a>
+            {% endif %}
+        </div>
+    </form>
+    {% if audit_log %}
+        <p class="audit-count">{{ audit_log.start_index }}–{{ audit_log.end_index }} sur {{ audit_log.paginator.count }} action{{ audit_log.paginator.count|pluralize }}</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="historique-titre">
+            <table class="audit-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Date et heure</th>
+                        <th scope="col">Action</th>
+                        <th scope="col">Auteur</th>
+                        <th scope="col">Objet</th>
+                        <th scope="col">Motif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in audit_log %}
+                        <tr>
+                            <td><time datetime="{{ item.date|date:'c' }}">{{ item.date|date:"d/m/Y" }}<br>{{ item.date|date:"H:i:s" }}</time></td>
+                            <td><span class="audit-action">{{ item.action }}</span></td>
+                            <td>{{ item.actor.get_username }}</td>
+                            <td>{{ item.target }}</td>
+                            <td class="audit-reason">{{ item.reason|default:"—" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if audit_log.has_other_pages %}
+            <nav class="actions audit-pages" aria-label="Pages de l’historique">
+                {% if audit_log.has_previous %}
+                    <a class="button secondary" href="{% querystring audit_page=audit_log.previous_page_number %}#historique">Page précédente</a>
+                {% endif %}
+                <span>Page {{ audit_log.number }} sur {{ audit_log.paginator.num_pages }}</span>
+                {% if audit_log.has_next %}
+                    <a class="button secondary" href="{% querystring audit_page=audit_log.next_page_number %}#historique">Page suivante</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    {% elif audit_query %}
+        <p class="empty">Aucune action ne correspond à cette recherche.</p>
+    {% else %}
+        <p class="empty">Aucune action enregistrée.</p>
+    {% endif %}
+</section>

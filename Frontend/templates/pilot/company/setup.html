@@ -4,18 +4,18 @@
         <li>
             <strong>Créer un premier projet</strong>
             {% if setup.project %}<span>Terminé</span>
-            {% else %}<a href="{% url 'project_new' member.company_id %}">Créer le projet</a>{% endif %}
+            {% else %}<a class="button secondary compact" href="{% url 'project_new' member.company_id %}">Créer le projet</a>{% endif %}
         </li>
         <li>
             <strong>Définir et approuver un budget</strong>
             {% if setup.budget_done %}<span>Terminé</span>
-            {% elif setup.budget_project %}<a href="{% url 'project' member.company_id setup.budget_project.pk %}#budget">Ouvrir le budget</a>
+            {% elif setup.budget_project %}<a class="button secondary compact" href="{% url 'project' member.company_id setup.budget_project.pk %}#budget">Ouvrir le budget</a>
             {% else %}<span>Après la création du projet</span>{% endif %}
         </li>
         <li>
             <strong>Initialiser la trésorerie</strong>
             {% if setup.cash_done %}<span>Terminé</span>
-            {% else %}<a href="{% url 'opening' member.company_id %}">Saisir le solde d’ouverture</a>{% endif %}
+            {% else %}<a class="button secondary compact" href="{% url 'opening' member.company_id %}">Saisir le solde d’ouverture</a>{% endif %}
         </li>
     </ol>
 </section>

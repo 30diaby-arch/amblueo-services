@@ -19,7 +19,7 @@
         <div class="panel"><h2>Encaissements</h2><strong>{{ totals.income }} {{ currency }}</strong><span>Sur la période</span></div>
         <div class="panel"><h2>Trésorerie</h2>
             {% if cash %}<strong>{{ cash.current }} {{ currency }}</strong><span>Prévision à 30 jours · {{ cash.forecast }} {{ currency }}</span>
-            {% else %}<a href="{% url 'opening' member.company_id %}">Initialiser le solde d’ouverture</a>{% endif %}
+            {% else %}<a class="button secondary compact" href="{% url 'opening' member.company_id %}">Initialiser le solde d’ouverture</a>{% endif %}
         </div>
         <div class="panel dashboard-expenses"><h2>Décaissements</h2><strong>{{ totals.expense }} {{ currency }}</strong><span>Sur la période</span></div>
         <div class="panel dashboard-risks"><h2>Projets à risque</h2><strong>{{ risks|length }}</strong><span>Sur {{ project_count }} projet{{ project_count|pluralize }}</span></div>
@@ -73,7 +73,7 @@
                         <tbody>
                         {% for project in projects %}
                         <tr>
-                            <th scope="row"><a href="{% url 'project' member.company_id project.pk %}">{{ project.name }}</a><br><small>{{ project.get_status_display }}</small></th>
+                            <th scope="row"><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}">{{ project.name }}</a><br><small>{{ project.get_status_display }}</small></th>
                             <td>{{ project.end }}</td><td>{{ project.tasks_todo }}</td><td>{{ project.tasks_doing }}</td>
                             <td>{{ project.tasks_done }}</td><td>{{ project.tasks_late }}</td>
                             <td>{% if project.tasks_total %}{% widthratio project.tasks_done project.tasks_total 100 %} %{% else %}Aucune tâche{% endif %}</td>
@@ -92,7 +92,7 @@
                 <p>Total approuvé · <strong>{{ budget_total }} {{ currency }}</strong></p>
                 <ul class="clean dashboard-progress">
                     {% for project, stats in budgets %}{% if stats.approved %}
-                    <li><a href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }}</a>
+                    <li><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }}</a>
                         {% widthratio stats.approved budget_total 100 as share %}
                         <span>{{ stats.approved }} {{ currency }} · {{ share }} %</span>
                         <progress max="100" value="{{ share }}" aria-label="Part du budget pour {{ project.name }}"></progress>
@@ -111,22 +111,22 @@
             <h3>À examiner en priorité</h3>
             {% endif %}
             <ul class="clean dashboard-alerts">
-                {% if cash.forecast < 0 %}<li><strong>Trésorerie</strong><a href="{% url 'company' member.company_id %}">Solde prévisionnel négatif · {{ cash.forecast }} {{ currency }}</a></li>{% endif %}
+                {% if cash.forecast < 0 %}<li><strong>Trésorerie</strong><a class="button secondary compact" href="{% url 'company' member.company_id %}">Solde prévisionnel négatif · {{ cash.forecast }} {{ currency }}</a></li>{% endif %}
                 {% for project, stats in risks|slice:":5" %}
-                <li><strong>Budget</strong><a href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }} · {% if stats.available < 0 %}Budget dépassé{% else %}Risque de dépassement{% endif %}</a></li>
+                <li><strong>Budget</strong><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }} · {% if stats.available < 0 %}Budget dépassé{% else %}Risque de dépassement{% endif %}</a></li>
                 {% endfor %}
                 {% for op, amount in overdue|slice:":5" %}
-                <li><strong>Impayé</strong><a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }} · {{ op.due }}</a></li>
+                <li><strong>Impayé</strong><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }} · {{ op.due }}</a></li>
                 {% endfor %}
                 {% for op in pending %}
-                <li><strong>Validation</strong><a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ op.amount }} {{ currency }}</a></li>
+                <li><strong>Validation</strong><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ op.amount }} {{ currency }}</a></li>
                 {% endfor %}
                 {% for task in late_tasks %}
-                <li><strong>Tâche</strong><a href="{% url 'project' member.company_id task.project_id %}#tâches">{{ task.title }} · {{ task.project }} · {{ task.end }}</a></li>
+                <li><strong>Tâche</strong><a class="button secondary compact" href="{% url 'project' member.company_id task.project_id %}#tâches">{{ task.title }} · {{ task.project }} · {{ task.end }}</a></li>
                 {% endfor %}
             </ul>
             {% if not alerts %}<p class="empty">Aucune alerte à traiter.</p>{% endif %}
-            <div class="actions"><a href="{% url 'schedule' member.company_id %}">Ouvrir l’échéancier</a><a href="{% url 'company' member.company_id %}#priorites">Voir les actions à traiter</a></div>
+            <div class="actions"><a class="button secondary compact" href="{% url 'schedule' member.company_id %}">Ouvrir l’échéancier</a><a class="button secondary compact" href="{% url 'company' member.company_id %}#priorites">Voir les actions à traiter</a></div>
         </section>
         <section class="panel dashboard-deadlines" aria-labelledby="dashboard-echeances">
             <h2 id="dashboard-echeances">Échéances à traiter</h2>
@@ -140,8 +140,8 @@
                     {% for row in deadlines %}
                     <tr>
                         <th scope="row">{{ row.label }}</th>
-                        <td>{% if row.income %}<a href="{% url 'schedule' member.company_id %}?kind=income{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À encaisser, {{ row.label }} : {{ row.income }} {{ currency }}">{{ row.income }} {{ currency }}</a><br><small>{{ row.income_count }} opération{{ row.income_count|pluralize }}</small>{% else %}—{% endif %}</td>
-                        <td>{% if row.expense %}<a href="{% url 'schedule' member.company_id %}?kind=expense{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À payer, {{ row.label }} : {{ row.expense }} {{ currency }}">{{ row.expense }} {{ currency }}</a><br><small>{{ row.expense_count }} opération{{ row.expense_count|pluralize }}</small>{% else %}—{% endif %}</td>
+                        <td>{% if row.income %}<a class="button secondary compact" href="{% url 'schedule' member.company_id %}?kind=income{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À encaisser, {{ row.label }} : {{ row.income }} {{ currency }}">{{ row.income }} {{ currency }}</a><br><small>{{ row.income_count }} opération{{ row.income_count|pluralize }}</small>{% else %}—{% endif %}</td>
+                        <td>{% if row.expense %}<a class="button secondary compact" href="{% url 'schedule' member.company_id %}?kind=expense{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À payer, {{ row.label }} : {{ row.expense }} {{ currency }}">{{ row.expense }} {{ currency }}</a><br><small>{{ row.expense_count }} opération{{ row.expense_count|pluralize }}</small>{% else %}—{% endif %}</td>
                         <td>{{ row.net }} {{ currency }}</td>
                     </tr>
                     {% endfor %}
@@ -153,7 +153,7 @@
             <ul class="clean dashboard-alerts">
                 {% for op, amount in upcoming %}
                 <li><time datetime="{{ op.due|date:'Y-m-d' }}">{{ op.due }}</time>
-                    <a href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }}</a>
+                    <a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }}</a>
                     <small>{{ op.get_kind_display }} · {{ op.counterparty|default:op.project.name }}</small>
                 </li>
                 {% endfor %}

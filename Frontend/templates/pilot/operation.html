@@ -3,8 +3,8 @@
 <section class="panel"><div class="heading"><div><h1>{{ op.title }}</h1><p>{{ op.get_kind_display }} · {{ op.category }} · {{ op.get_state_display }} · échéance {{ op.due }}</p></div><strong class="amount">{{ op.amount }} {{ member.company.currency }}</strong></div>
 {% if op.state == "approved" %}<div class="grid metrics">{% if op.kind == "expense" %}<div><span>Réalisé</span><strong>{{ balances.0 }}</strong></div>{% endif %}<div><span>Réglé</span><strong>{{ balances.1 }}</strong></div><div><span>Restant exigible</span><strong>{{ balances.2 }}</strong></div></div>{% endif %}
 <p>Client ou fournisseur : {{ op.counterparty|default:"Non renseigné" }} · Référence : {{ op.external_reference|default:"Non renseignée" }}
-{% if can_finance %} · <a href="{% url 'operation_reference' member.company_id op.pk %}">Modifier le tiers et la référence</a>{% endif %}</p>
-{% if op.evidence %}<p><a href="{% url 'attachment' member.company_id op.pk %}">Télécharger le justificatif</a></p>{% endif %}
+{% if can_finance %} · <a class="button secondary compact" href="{% url 'operation_reference' member.company_id op.pk %}">Modifier le tiers et la référence</a>{% endif %}</p>
+{% if op.evidence %}<p><a class="button secondary compact" href="{% url 'attachment' member.company_id op.pk %}">Télécharger le justificatif</a></p>{% endif %}
 <div class="actions">
 {% if op.state == "draft" and can_submit %}<a class="button" href="{% url 'change_state' member.company_id op.pk 'submit' %}">Soumettre</a>{% endif %}
 {% if can_finance and op.state == "submitted" %}<a class="button" href="{% url 'change_state' member.company_id op.pk 'approve' %}">Approuver</a><a class="button danger" href="{% url 'change_state' member.company_id op.pk 'reject' %}">Rejeter</a>{% endif %}
@@ -14,5 +14,5 @@
 <a class="button danger" href="{% url 'change_state' member.company_id op.pk 'cancel' %}">Annuler l’opération</a>{% endif %}</div></section>
 <section class="panel"><h2 id="écritures">Écritures</h2><div class="table-wrap" tabindex="0" role="region" aria-labelledby="écritures"><table><thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col" class="numeric">Montant</th><th scope="col">Action</th></tr></thead><tbody>
 {% for item in postings %}<tr><td>{{ item.date }}</td><td>{{ item.get_kind_display }}</td><td class="numeric">{{ item.amount }}</td><td>
-{% if item.void %}Annulée{% elif can_finance %}<a href="{% url 'posting_void' member.company_id op.pk item.pk %}">Corriger</a>{% endif %}</td></tr>
+{% if item.void %}Annulée{% elif can_finance %}<a class="button secondary compact" href="{% url 'posting_void' member.company_id op.pk item.pk %}">Corriger</a>{% endif %}</td></tr>
 {% empty %}<tr><td class="empty" colspan="4">Aucune écriture.</td></tr>{% endfor %}</tbody></table></div></section>{% endblock %}
