@@ -1,33 +1,66 @@
 {% extends "pilot/base.html" %}{% block title %}{{ member.company }} · Amblueo Services{% endblock %}{% block content %}
-<nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'home' %}">Mes entreprises</a></nav>
-<div class="heading"><div><h1>{{ member.company }}</h1><p>{{ member.get_role_display }} · {{ member.company.currency }}</p></div>
-<div class="actions">{% if can_finance %}<a class="button" href="{% url 'dashboard' member.company_id %}">Tableau de bord</a><a class="button secondary" href="#historique">Historique</a>{% endif %}{% if can_manage %}<a class="button" href="{% url 'project_new' member.company_id %}">Nouveau projet</a>{% endif %}
-{% if member.role == "owner" %}<a class="button secondary" href="{% url 'initial_import' member.company_id %}">Importer des données</a>{% endif %}
-{% if can_view_finance %}<a class="button secondary" href="{% url 'schedule' member.company_id %}">Échéancier</a><a class="button secondary" href="{% url 'export' member.company_id %}">Préparer un export</a>{% endif %}</div></div>
-{% include "pilot/company/priorities.html" %}
-{% if setup %}{% include "pilot/company/setup.html" %}{% endif %}
-{% if can_finance %}
-<section class="panel"><h2>Trésorerie</h2>{% if cash %}
-<div class="grid metrics"><div><span>Solde courant</span><strong>{{ cash.current }} {{ member.company.currency }}</strong></div>
-<div><span>Prévision au {{ cash.horizon }}</span><strong>{{ cash.forecast }} {{ member.company.currency }}</strong></div></div>
-{% if cash.forecast < 0 %}<p class="alert">Solde prévisionnel négatif.</p>{% endif %}
-{% else %}<a class="button secondary compact" href="{% url 'opening' member.company_id %}">Initialiser le solde d’ouverture</a>{% endif %}</section>{% endif %}
-<section class="panel"><h2 id="projets">Projets</h2><p>En cours : {{ active_count }}</p><div class="table-wrap" tabindex="0" role="region" aria-labelledby="projets"><table><thead><tr><th scope="col">Projet</th><th scope="col">Statut</th><th scope="col">Fin</th></tr></thead><tbody>
-{% for item in projects %}<tr><td><a class="button secondary compact" href="{% url 'project' member.company_id item.pk %}">{{ item.name }}</a></td><td><span class="status" data-state="{{ item.status }}">{{ item.get_status_display }}</span></td><td>{{ item.end }}</td></tr>
-{% empty %}<tr><td class="empty" colspan="3">Aucun projet.{% if can_manage %} <a class="button secondary compact" href="{% url 'project_new' member.company_id %}">Créer un premier projet</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div></section>
-{% if late %}<section class="panel" id="retards"><h2>Tâches en retard</h2><ul class="clean">
-{% for task in late %}<li>{% if can_manage or task.assignee_id == member.pk %}<a class="button secondary compact" href="{% url 'task_edit' member.company_id task.project_id task.pk %}">{{ task.title }}</a>{% else %}{{ task.title }}{% endif %} · <a class="button secondary compact" href="{% url 'project' member.company_id task.project_id %}#tâches">{{ task.project }}</a> · {{ task.end }}</li>{% endfor %}
-</ul></section>{% endif %}
-{% if can_view_finance %}
-<section class="panel"><h2 id="budgets-par-projet">Budgets par projet</h2><div class="table-wrap" tabindex="0" role="region" aria-labelledby="budgets-par-projet"><table><thead><tr><th scope="col">Projet</th><th scope="col" class="numeric">Approuvé</th><th scope="col" class="numeric">Réalisé</th><th scope="col" class="numeric">Engagé ouvert</th><th scope="col" class="numeric">Disponible</th><th scope="col">Alerte</th></tr></thead><tbody>
-{% for item, stats in budgets %}<tr><td><a class="button secondary compact" href="{% url 'project' member.company_id item.pk %}#budget">{{ item.name }}</a></td><td class="numeric">{{ stats.approved }}</td><td class="numeric">{{ stats.realized }}</td><td class="numeric">{{ stats.open }}</td><td class="numeric">{{ stats.available }}</td>
-<td>{% if stats.available < 0 %}Dépassé{% elif stats.forecast < 0 %}Risque{% else %}—{% endif %}</td></tr>{% empty %}<tr><td class="empty" colspan="6">Aucun projet.</td></tr>{% endfor %}</tbody></table></div></section>
-<section class="panel" id="impayes"><h2>Impayés échus</h2><ul class="clean">
-{% for op, rest in overdue %}<li><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }}</a> · {{ op.get_kind_display }} · {{ rest }} {{ member.company.currency }} · {{ op.due }}</li>{% empty %}<li class="empty">Aucun impayé échu.</li>{% endfor %}
-</ul></section>
-<section class="panel"><h2>Règlements à venir · 30 jours</h2><ul>{% for op, rest in due %}{% if rest > 0 %}<li>{{ op.due }} · <a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }}</a> · {{ op.get_kind_display }} · {{ rest }} {{ member.company.currency }}</li>{% endif %}{% empty %}<li>Aucune échéance.</li>{% endfor %}</ul></section>{% endif %}
-{% if member.role == "owner" %}<section class="panel"><div class="heading"><h2>Équipe</h2><a class="button secondary compact" href="{% url 'invite' member.company_id %}">Inviter un membre</a></div>
-<ul class="clean">{% for item in team %}<li>{{ item.user.get_username }} · {{ item.get_role_display }}
-{% if item.active and item.role != "owner" %}<form class="inline" action="{% url 'deactivate' member.company_id item.pk %}" method="post">{% csrf_token %}<button class="quiet">Désactiver</button></form>{% elif not item.active %} · Désactivé{% endif %}</li>{% endfor %}</ul></section>{% endif %}
-{% if can_finance %}{% include "pilot/company/history.html" %}{% endif %}
+<div class="workspace-layout">
+    <nav class="workspace-navigation" aria-label="Fonctions de l’entreprise">
+        <a class="workspace-overview" href="#entreprise">Vue d’ensemble</a>
+        {% if can_finance %}<a href="{% url 'dashboard' member.company_id %}">Tableau de bord</a>{% endif %}
+        <a href="#projets">Projets</a>
+        {% if can_manage %}<a href="{% url 'project_new' member.company_id %}">Nouveau projet</a>{% endif %}
+        {% if can_view_finance %}
+            <a href="#budgets-par-projet">Budgets par projet</a>
+            <a href="{% url 'schedule' member.company_id %}">Échéancier</a>
+            <a href="{% url 'export' member.company_id %}">Préparer un export</a>
+        {% endif %}
+        {% if can_finance %}<a href="#historique">Historique</a>{% endif %}
+        {% if member.role == "owner" %}<a href="{% url 'initial_import' member.company_id %}">Importer des données</a>{% endif %}
+    </nav>
+    <div class="workspace-content">
+        <nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'home' %}">Mes entreprises</a></nav>
+        <header id="entreprise">
+            <h1>{{ member.company }}</h1>
+            <p>{{ member.get_role_display }} · {{ member.company.currency }}</p>
+        </header>
+        <section class="company-overview" aria-labelledby="entreprise-indicateurs">
+            <h2 id="entreprise-indicateurs">Indicateurs clés</h2>
+            <div class="company-kpis">
+                <div class="panel"><h3>Projets en cours</h3><strong>{{ active_count }}</strong></div>
+                <div class="panel company-kpi-warning"><h3>Tâches en retard</h3><strong>{{ late|length }}</strong></div>
+                {% if can_finance %}
+                    <div class="panel">
+                        <h3>Solde courant</h3>
+                        {% if cash %}<strong>{{ cash.current }} {{ member.company.currency }}</strong>
+                        {% else %}<a class="button secondary compact" href="{% url 'opening' member.company_id %}">Initialiser le solde d’ouverture</a>{% endif %}
+                    </div>
+                    {% if cash %}
+                        <div class="panel{% if cash.forecast < 0 %} company-kpi-danger{% endif %}">
+                            <h3>Solde prévisionnel</h3>
+                            <strong>{{ cash.forecast }} {{ member.company.currency }}</strong>
+                            <small>Au {{ cash.horizon }}</small>
+                            {% if cash.forecast < 0 %}<p class="alert">Solde prévisionnel négatif.</p>{% endif %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </section>
+        {% include "pilot/company/priorities.html" %}
+        {% if setup %}{% include "pilot/company/setup.html" %}{% endif %}
+        <section class="panel"><h2 id="projets">Projets</h2><div class="table-wrap" tabindex="0" role="region" aria-labelledby="projets"><table><thead><tr><th scope="col">Projet</th><th scope="col">Statut</th><th scope="col">Fin</th></tr></thead><tbody>
+        {% for item in projects %}<tr><td><a class="button secondary compact" href="{% url 'project' member.company_id item.pk %}">{{ item.name }}</a></td><td><span class="status" data-state="{{ item.status }}">{{ item.get_status_display }}</span></td><td>{{ item.end }}</td></tr>
+        {% empty %}<tr><td class="empty" colspan="3">Aucun projet.{% if can_manage %} <a class="button secondary compact" href="{% url 'project_new' member.company_id %}">Créer un premier projet</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div></section>
+        {% if late %}<section class="panel" id="retards"><h2>Tâches en retard</h2><ul class="clean">
+        {% for task in late %}<li>{% if can_manage or task.assignee_id == member.pk %}<a class="button secondary compact" href="{% url 'task_edit' member.company_id task.project_id task.pk %}">{{ task.title }}</a>{% else %}{{ task.title }}{% endif %} · <a class="button secondary compact" href="{% url 'project' member.company_id task.project_id %}#tâches">{{ task.project }}</a> · {{ task.end }}</li>{% endfor %}
+        </ul></section>{% endif %}
+        {% if can_view_finance %}
+        <section class="panel"><h2 id="budgets-par-projet">Budgets par projet</h2><div class="table-wrap" tabindex="0" role="region" aria-labelledby="budgets-par-projet"><table><thead><tr><th scope="col">Projet</th><th scope="col" class="numeric">Approuvé</th><th scope="col" class="numeric">Réalisé</th><th scope="col" class="numeric">Engagé ouvert</th><th scope="col" class="numeric">Disponible</th><th scope="col">Alerte</th></tr></thead><tbody>
+        {% for item, stats in budgets %}<tr><td><a class="button secondary compact" href="{% url 'project' member.company_id item.pk %}#budget">{{ item.name }}</a></td><td class="numeric">{{ stats.approved }}</td><td class="numeric">{{ stats.realized }}</td><td class="numeric">{{ stats.open }}</td><td class="numeric">{{ stats.available }}</td>
+        <td>{% if stats.available < 0 %}Dépassé{% elif stats.forecast < 0 %}Risque{% else %}—{% endif %}</td></tr>{% empty %}<tr><td class="empty" colspan="6">Aucun projet.</td></tr>{% endfor %}</tbody></table></div></section>
+        <section class="panel" id="impayes"><h2>Impayés échus</h2><ul class="clean">
+        {% for op, rest in overdue %}<li><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }}</a> · {{ op.get_kind_display }} · {{ rest }} {{ member.company.currency }} · {{ op.due }}</li>{% empty %}<li class="empty">Aucun impayé échu.</li>{% endfor %}
+        </ul></section>
+        <section class="panel"><h2>Règlements à venir · 30 jours</h2><ul>{% for op, rest in due %}{% if rest > 0 %}<li>{{ op.due }} · <a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }}</a> · {{ op.get_kind_display }} · {{ rest }} {{ member.company.currency }}</li>{% endif %}{% empty %}<li>Aucune échéance.</li>{% endfor %}</ul></section>{% endif %}
+        {% if member.role == "owner" %}<section class="panel"><div class="heading"><h2>Équipe</h2><a class="button secondary compact" href="{% url 'invite' member.company_id %}">Inviter un membre</a></div>
+        <ul class="clean">{% for item in team %}<li>{{ item.user.get_username }} · {{ item.get_role_display }}
+        {% if item.active and item.role != "owner" %}<form class="inline" action="{% url 'deactivate' member.company_id item.pk %}" method="post">{% csrf_token %}<button class="quiet">Désactiver</button></form>{% elif not item.active %} · Désactivé{% endif %}</li>{% endfor %}</ul></section>{% endif %}
+        {% if can_finance %}{% include "pilot/company/history.html" %}{% endif %}
+    </div>
+</div>
 {% endblock %}

@@ -3,16 +3,16 @@
 {% block title %}Tableau de bord · {{ member.company }} · Amblueo Services{% endblock %}
 {% block content %}
 {% with currency=member.company.currency %}
-<div class="dashboard">
-    <nav class="dashboard-navigation" aria-label="Sections du tableau de bord">
-        <a class="dashboard-overview" href="#dashboard-vue">Vue d’ensemble</a>
+<div class="dashboard workspace-layout">
+    <nav class="workspace-navigation" aria-label="Sections du tableau de bord">
+        <a class="workspace-overview" href="#dashboard-vue">Vue d’ensemble</a>
         <a href="#dashboard-flux">Flux financiers</a>
         <a href="#dashboard-projets">Avancement des projets</a>
         <a href="#dashboard-budgets">Budgets</a>
         <a href="#dashboard-alertes">Alertes</a>
         <a href="#dashboard-echeances">Échéances</a>
     </nav>
-    <div class="dashboard-content">
+    <div class="workspace-content">
         <nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'company' member.company_id %}">{{ member.company }}</a></nav>
         <div class="heading dashboard-header">
             <div><h1 id="dashboard-vue">Tableau de bord</h1><p>{{ member.company }} · {{ today }} · {{ currency }}</p></div>
