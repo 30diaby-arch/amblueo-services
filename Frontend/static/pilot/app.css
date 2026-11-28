@@ -342,13 +342,52 @@ input[type=checkbox], input[type=radio] { accent-color: var(--AMBLUEO_UI_PRIMAIR
 .setup-list li span { color: var(--AMBLUEO_UI_SECONDAIRE); }
 .export-filters { margin-bottom: 1rem; }
 
+main.shell:has(> .dashboard) {
+    width: min(96rem, calc(100% - clamp(2rem, 5vw, 4rem)));
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    align-items: start;
+    gap: clamp(1rem, 2vw, 2rem);
+}
+
+.dashboard-navigation {
+    position: sticky;
+    top: 1rem;
+    display: grid;
+    gap: .35rem;
+    padding: .75rem;
+    border-radius: .85rem;
+    background: var(--AMBLUEO_UI_PRIMAIRE_FONCE);
+    border-top: 3px solid var(--AMBLUEO_UI_ACCENT);
+}
+
+.dashboard-navigation a {
+    padding: .55rem .7rem;
+    border-radius: .5rem;
+    color: var(--AMBLUEO_UI_SURFACE);
+    font-size: .9rem;
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.dashboard-navigation .dashboard-overview { background: var(--AMBLUEO_UI_PRIMAIRE); }
+.dashboard-navigation a:hover { background: var(--AMBLUEO_UI_TEINTE); color: var(--AMBLUEO_UI_PRIMAIRE_FONCE); }
+.dashboard-navigation a:focus-visible { outline-color: var(--AMBLUEO_UI_SURFACE); }
+.dashboard-content { min-width: 0; }
+.dashboard-content :is(h1, h2)[id] { scroll-margin-top: 1rem; }
+
 .dashboard-header { margin-bottom: 1.25rem; }
 .dashboard-header form { margin: 0; }
 .dashboard-header select { width: auto; }
 .dashboard-kpis, .dashboard-panels { display: grid; gap: 1rem; margin-bottom: 1rem; }
 .dashboard-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.dashboard-panels { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
-.dashboard .panel { margin: 0; box-shadow: 0 3px 12px rgb(28 25 58 / 6%); }
+.dashboard-panels { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.dashboard-flow, .dashboard-warnings { grid-column: span 7; }
+.dashboard-projects, .dashboard-budgets { grid-column: span 5; }
+.dashboard .panel { min-width: 0; margin: 0; box-shadow: 0 3px 12px rgb(28 25 58 / 6%); }
 .dashboard-kpis .panel { border-top: .24rem solid var(--AMBLUEO_UI_PRIMAIRE); }
 .dashboard-kpis .dashboard-expenses { border-top-color: var(--AMBLUEO_UI_ACCENT); }
 .dashboard-kpis .dashboard-risks { border-top-color: var(--AMBLUEO_UI_DANGER); }
@@ -367,18 +406,30 @@ input[type=checkbox], input[type=radio] { accent-color: var(--AMBLUEO_UI_PRIMAIR
 .dashboard-group small { font-size: .75rem; }
 .dashboard-progress li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .15rem .65rem; padding: .4rem 0; }
 .dashboard-progress progress { grid-column: 1 / -1; width: 100%; height: .75rem; accent-color: var(--AMBLUEO_UI_PRIMAIRE); }
-.dashboard-alerts li { display: flex; align-items: baseline; gap: .65rem; padding: .5rem 0; border-bottom: 1px solid var(--AMBLUEO_UI_BORDURE); }
+.dashboard-alerts li { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem; padding: .5rem 0; border-bottom: 1px solid var(--AMBLUEO_UI_BORDURE); }
 .dashboard-alerts strong { color: var(--AMBLUEO_UI_DANGER); font-size: .875rem; }
-@media (max-width: 840px) {
-    .dashboard-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dashboard-panels { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 420px) {
-    .dashboard-kpis { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 68rem) {
+    .dashboard { grid-template-columns: minmax(0, 1fr); }
+    .dashboard-navigation {
+        position: static;
+        display: flex;
+        flex-wrap: wrap;
+    }
 }
 
-.dashboard-navigation { margin-bottom: 1rem; padding: .55rem .85rem; background: var(--AMBLUEO_UI_TEINTE); border-radius: .65rem; }
-.dashboard-navigation a { padding: .35rem .1rem; }
+@media (max-width: 54rem) {
+    .dashboard-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard-panels { grid-template-columns: minmax(0, 1fr); }
+    .dashboard-panels > .panel { grid-column: 1; }
+}
+
+@media (max-width: 32rem) {
+    .dashboard-kpis { grid-template-columns: minmax(0, 1fr); }
+    .dashboard-header form { width: 100%; }
+    .dashboard-header label { flex-basis: 100%; margin-bottom: 0; }
+    .dashboard-header select { flex: 1; min-width: 0; }
+}
+
 .dashboard-canvas { width: 100%; height: 16rem; }
 .dashboard-donut { height: 12rem; }
 .dashboard-deadlines { grid-column: 1 / -1; }

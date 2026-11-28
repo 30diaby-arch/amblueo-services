@@ -4,163 +4,166 @@
 {% block content %}
 {% with currency=member.company.currency %}
 <div class="dashboard">
-    <nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'company' member.company_id %}">{{ member.company }}</a></nav>
-    <div class="heading dashboard-header">
-        <div><h1>Tableau de bord</h1><p>{{ member.company }} · {{ today }} · {{ currency }}</p></div>
-        <form method="get" class="actions">
-            <label for="dashboard-periode">Période des flux</label>
-            <select id="dashboard-periode" name="periode">
-                {% for value, label in periods %}<option value="{{ value }}"{% if period == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
-            </select>
-            <button class="quiet">Appliquer</button>
-        </form>
-    </div>
-    <section class="dashboard-kpis" aria-label="Indicateurs clés">
-        <div class="panel"><h2>Encaissements</h2><strong>{{ totals.income }} {{ currency }}</strong><span>Sur la période</span></div>
-        <div class="panel"><h2>Trésorerie</h2>
-            {% if cash %}<strong>{{ cash.current }} {{ currency }}</strong><span>Prévision à 30 jours · {{ cash.forecast }} {{ currency }}</span>
-            {% else %}<a class="button secondary compact" href="{% url 'opening' member.company_id %}">Initialiser le solde d’ouverture</a>{% endif %}
-        </div>
-        <div class="panel dashboard-expenses"><h2>Décaissements</h2><strong>{{ totals.expense }} {{ currency }}</strong><span>Sur la période</span></div>
-        <div class="panel dashboard-risks"><h2>Projets à risque</h2><strong>{{ risks|length }}</strong><span>Sur {{ project_count }} projet{{ project_count|pluralize }}</span></div>
-    </section>
-    <nav class="dashboard-navigation actions" aria-label="Sections du tableau de bord">
+    <nav class="dashboard-navigation" aria-label="Sections du tableau de bord">
+        <a class="dashboard-overview" href="#dashboard-vue">Vue d’ensemble</a>
         <a href="#dashboard-flux">Flux financiers</a>
-        <a href="#dashboard-projets">Avancement</a>
+        <a href="#dashboard-projets">Avancement des projets</a>
         <a href="#dashboard-budgets">Budgets</a>
         <a href="#dashboard-alertes">Alertes</a>
         <a href="#dashboard-echeances">Échéances</a>
     </nav>
-    <div class="dashboard-panels">
-        <section class="panel" aria-labelledby="dashboard-flux">
-            <h2 id="dashboard-flux">Flux financiers</h2>
-            <p class="helptext">Règlements enregistrés du {{ period_start }} au {{ today }}.</p>
-            {% if totals.income or totals.expense %}
-            <div id="dashboard-flux-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
-            <div id="dashboard-flux-chart-fallback">
-            <div class="dashboard-legend" aria-hidden="true"><span>Encaissements</span><span>Décaissements</span></div>
-            <div class="dashboard-chart-wrap">
-                <div class="dashboard-chart" aria-hidden="true">
-                    {% for point in flow %}
-                    <div class="dashboard-group">
-                        <div class="dashboard-columns">
-                            <div class="dashboard-bar" style="--dashboard-value:{{ point.income_height }}%" title="Encaissements · {{ point.income }} {{ currency }}"></div>
-                            <div class="dashboard-bar expense" style="--dashboard-value:{{ point.expense_height }}%" title="Décaissements · {{ point.expense }} {{ currency }}"></div>
-                        </div>
-                        <small>{{ point.label }}</small>
-                    </div>
-                    {% endfor %}
-                </div>
+    <div class="dashboard-content">
+        <nav class="crumb" aria-label="Fil d’Ariane"><a href="{% url 'company' member.company_id %}">{{ member.company }}</a></nav>
+        <div class="heading dashboard-header">
+            <div><h1 id="dashboard-vue">Tableau de bord</h1><p>{{ member.company }} · {{ today }} · {{ currency }}</p></div>
+            <form method="get" class="actions">
+                <label for="dashboard-periode">Période des flux</label>
+                <select id="dashboard-periode" name="periode">
+                    {% for value, label in periods %}<option value="{{ value }}"{% if period == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                <button class="quiet">Appliquer</button>
+            </form>
+        </div>
+        <section class="dashboard-kpis" aria-label="Indicateurs clés">
+            <div class="panel"><h2>Encaissements</h2><strong>{{ totals.income }} {{ currency }}</strong><span>Sur la période</span></div>
+            <div class="panel"><h2>Trésorerie</h2>
+                {% if cash %}<strong>{{ cash.current }} {{ currency }}</strong><span>Prévision à 30 jours · {{ cash.forecast }} {{ currency }}</span>
+                {% else %}<a class="button secondary compact" href="{% url 'opening' member.company_id %}">Initialiser le solde d’ouverture</a>{% endif %}
             </div>
-            </div>
-            <details><summary>Voir les montants par période</summary>
-                <div class="table-wrap" tabindex="0" role="region" aria-label="Montants des flux">
-                    <table><thead><tr><th scope="col">Période</th><th scope="col">Encaissements</th><th scope="col">Décaissements</th></tr></thead>
-                    <tbody>{% for point in flow %}<tr><th scope="row">{{ point.label }}</th><td>{{ point.income }} {{ currency }}</td><td>{{ point.expense }} {{ currency }}</td></tr>{% endfor %}</tbody></table>
-                </div>
-            </details>
-            {% else %}<p class="empty">Aucun règlement enregistré sur cette période.</p>{% endif %}
+            <div class="panel dashboard-expenses"><h2>Décaissements</h2><strong>{{ totals.expense }} {{ currency }}</strong><span>Sur la période</span></div>
+            <div class="panel dashboard-risks"><h2>Projets à risque</h2><strong>{{ risks|length }}</strong><span>Sur {{ project_count }} projet{{ project_count|pluralize }}</span></div>
         </section>
-        <section class="panel" aria-labelledby="dashboard-projets">
-            <h2 id="dashboard-projets">Avancement des projets</h2>
-            <p class="helptext">Répartition des tâches des six premiers projets avec des tâches, classés par date de fin.</p>
-            {% if has_progress %}<div id="dashboard-projets-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>{% endif %}
-            {% if projects %}
-            <details><summary>Voir tous les projets ({{ project_count }})</summary>
-                <div class="table-wrap" tabindex="0" role="region" aria-label="Détail de l’avancement">
+        <div class="dashboard-panels">
+            <section class="panel dashboard-flow" aria-labelledby="dashboard-flux">
+                <h2 id="dashboard-flux">Flux financiers</h2>
+                <p class="helptext">Règlements enregistrés du {{ period_start }} au {{ today }}.</p>
+                {% if totals.income or totals.expense %}
+                <div id="dashboard-flux-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
+                <div id="dashboard-flux-chart-fallback">
+                <div class="dashboard-legend" aria-hidden="true"><span>Encaissements</span><span>Décaissements</span></div>
+                <div class="dashboard-chart-wrap">
+                    <div class="dashboard-chart" aria-hidden="true">
+                        {% for point in flow %}
+                        <div class="dashboard-group">
+                            <div class="dashboard-columns">
+                                <div class="dashboard-bar" style="--dashboard-value:{{ point.income_height }}%" title="Encaissements · {{ point.income }} {{ currency }}"></div>
+                                <div class="dashboard-bar expense" style="--dashboard-value:{{ point.expense_height }}%" title="Décaissements · {{ point.expense }} {{ currency }}"></div>
+                            </div>
+                            <small>{{ point.label }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                </div>
+                <details><summary>Voir les montants par période</summary>
+                    <div class="table-wrap" tabindex="0" role="region" aria-label="Montants des flux">
+                        <table><thead><tr><th scope="col">Période</th><th scope="col">Encaissements</th><th scope="col">Décaissements</th></tr></thead>
+                        <tbody>{% for point in flow %}<tr><th scope="row">{{ point.label }}</th><td>{{ point.income }} {{ currency }}</td><td>{{ point.expense }} {{ currency }}</td></tr>{% endfor %}</tbody></table>
+                    </div>
+                </details>
+                {% else %}<p class="empty">Aucun règlement enregistré sur cette période.</p>{% endif %}
+            </section>
+            <section class="panel dashboard-projects" aria-labelledby="dashboard-projets">
+                <h2 id="dashboard-projets">Avancement des projets</h2>
+                <p class="helptext">Répartition des tâches des six premiers projets avec des tâches, classés par date de fin.</p>
+                {% if has_progress %}<div id="dashboard-projets-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>{% endif %}
+                {% if projects %}
+                <details><summary>Voir tous les projets ({{ project_count }})</summary>
+                    <div class="table-wrap" tabindex="0" role="region" aria-label="Détail de l’avancement">
+                        <table>
+                            <thead><tr><th scope="col">Projet</th><th scope="col">Fin</th><th scope="col">À faire</th><th scope="col">En cours</th><th scope="col">Terminées</th><th scope="col">En retard</th><th scope="col">Avancement</th></tr></thead>
+                            <tbody>
+                            {% for project in projects %}
+                            <tr>
+                                <th scope="row"><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}">{{ project.name }}</a><br><small>{{ project.get_status_display }}</small></th>
+                                <td>{{ project.end }}</td><td>{{ project.tasks_todo }}</td><td>{{ project.tasks_doing }}</td>
+                                <td>{{ project.tasks_done }}</td><td>{{ project.tasks_late }}</td>
+                                <td>{% if project.tasks_total %}{% widthratio project.tasks_done project.tasks_total 100 %} %{% else %}Aucune tâche{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                {% else %}<p class="empty">Aucun projet.</p>{% endif %}
+            </section>
+            <section class="panel dashboard-budgets" aria-labelledby="dashboard-budgets">
+                <h2 id="dashboard-budgets">Répartition du budget</h2>
+                {% if budget_total %}
+                    <div id="dashboard-budget-chart" class="dashboard-canvas dashboard-donut" aria-hidden="true" hidden></div>
+                    <p>Total approuvé · <strong>{{ budget_total }} {{ currency }}</strong></p>
+                    <ul class="clean dashboard-progress">
+                        {% for project, stats in budgets %}{% if stats.approved %}
+                        <li><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }}</a>
+                            {% widthratio stats.approved budget_total 100 as share %}
+                            <span>{{ stats.approved }} {{ currency }} · {{ share }} %</span>
+                            <progress max="100" value="{{ share }}" aria-label="Part du budget pour {{ project.name }}"></progress>
+                        </li>
+                        {% endif %}{% endfor %}
+                    </ul>
+                {% else %}<p class="empty">Aucun budget approuvé.</p>{% endif %}
+            </section>
+            <section class="panel dashboard-warnings" aria-labelledby="dashboard-alertes">
+                <h2 id="dashboard-alertes">Alertes</h2>
+                {% if alerts %}
+                <div id="dashboard-alertes-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
+                <ul class="clean dashboard-alert-counts" aria-label="Nombre d’alertes par catégorie">
+                    {% for alert in alerts %}<li>{{ alert.label }} <strong>{{ alert.count }}</strong></li>{% endfor %}
+                </ul>
+                <h3>À examiner en priorité</h3>
+                {% endif %}
+                <ul class="clean dashboard-alerts">
+                    {% if cash.forecast < 0 %}<li><strong>Trésorerie</strong><a class="button secondary compact" href="{% url 'company' member.company_id %}">Solde prévisionnel négatif · {{ cash.forecast }} {{ currency }}</a></li>{% endif %}
+                    {% for project, stats in risks|slice:":5" %}
+                    <li><strong>Budget</strong><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }} · {% if stats.available < 0 %}Budget dépassé{% else %}Risque de dépassement{% endif %}</a></li>
+                    {% endfor %}
+                    {% for op, amount in overdue|slice:":5" %}
+                    <li><strong>Impayé</strong><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }} · {{ op.due }}</a></li>
+                    {% endfor %}
+                    {% for op in pending %}
+                    <li><strong>Validation</strong><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ op.amount }} {{ currency }}</a></li>
+                    {% endfor %}
+                    {% for task in late_tasks %}
+                    <li><strong>Tâche</strong><a class="button secondary compact" href="{% url 'project' member.company_id task.project_id %}#tâches">{{ task.title }} · {{ task.project }} · {{ task.end }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% if not alerts %}<p class="empty">Aucune alerte à traiter.</p>{% endif %}
+                <div class="actions"><a class="button secondary compact" href="{% url 'schedule' member.company_id %}">Ouvrir l’échéancier</a><a class="button secondary compact" href="{% url 'company' member.company_id %}#priorites">Voir les actions à traiter</a></div>
+            </section>
+            <section class="panel dashboard-deadlines" aria-labelledby="dashboard-echeances">
+                <h2 id="dashboard-echeances">Échéances à traiter</h2>
+                <p class="helptext">Montants exigibles aujourd’hui, en retard ou à échéance dans les 30 jours.</p>
+                {% if has_deadlines %}
+                <div id="dashboard-echeances-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
+                <div class="table-wrap" tabindex="0" role="region" aria-label="Échéances par horizon">
                     <table>
-                        <thead><tr><th scope="col">Projet</th><th scope="col">Fin</th><th scope="col">À faire</th><th scope="col">En cours</th><th scope="col">Terminées</th><th scope="col">En retard</th><th scope="col">Avancement</th></tr></thead>
+                        <thead><tr><th scope="col">Horizon</th><th scope="col">À encaisser</th><th scope="col">À payer</th><th scope="col">Écart net</th></tr></thead>
                         <tbody>
-                        {% for project in projects %}
+                        {% for row in deadlines %}
                         <tr>
-                            <th scope="row"><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}">{{ project.name }}</a><br><small>{{ project.get_status_display }}</small></th>
-                            <td>{{ project.end }}</td><td>{{ project.tasks_todo }}</td><td>{{ project.tasks_doing }}</td>
-                            <td>{{ project.tasks_done }}</td><td>{{ project.tasks_late }}</td>
-                            <td>{% if project.tasks_total %}{% widthratio project.tasks_done project.tasks_total 100 %} %{% else %}Aucune tâche{% endif %}</td>
+                            <th scope="row">{{ row.label }}</th>
+                            <td>{% if row.income %}<a class="button secondary compact" href="{% url 'schedule' member.company_id %}?kind=income{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À encaisser, {{ row.label }} : {{ row.income }} {{ currency }}">{{ row.income }} {{ currency }}</a><br><small>{{ row.income_count }} opération{{ row.income_count|pluralize }}</small>{% else %}—{% endif %}</td>
+                            <td>{% if row.expense %}<a class="button secondary compact" href="{% url 'schedule' member.company_id %}?kind=expense{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À payer, {{ row.label }} : {{ row.expense }} {{ currency }}">{{ row.expense }} {{ currency }}</a><br><small>{{ row.expense_count }} opération{{ row.expense_count|pluralize }}</small>{% else %}—{% endif %}</td>
+                            <td>{{ row.net }} {{ currency }}</td>
                         </tr>
                         {% endfor %}
                         </tbody>
                     </table>
                 </div>
-            </details>
-            {% else %}<p class="empty">Aucun projet.</p>{% endif %}
-        </section>
-        <section class="panel" aria-labelledby="dashboard-budgets">
-            <h2 id="dashboard-budgets">Répartition du budget</h2>
-            {% if budget_total %}
-                <div id="dashboard-budget-chart" class="dashboard-canvas dashboard-donut" aria-hidden="true" hidden></div>
-                <p>Total approuvé · <strong>{{ budget_total }} {{ currency }}</strong></p>
-                <ul class="clean dashboard-progress">
-                    {% for project, stats in budgets %}{% if stats.approved %}
-                    <li><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }}</a>
-                        {% widthratio stats.approved budget_total 100 as share %}
-                        <span>{{ stats.approved }} {{ currency }} · {{ share }} %</span>
-                        <progress max="100" value="{{ share }}" aria-label="Part du budget pour {{ project.name }}"></progress>
+                {% if upcoming %}
+                <h3>Prochaines échéances</h3>
+                <ul class="clean dashboard-alerts">
+                    {% for op, amount in upcoming %}
+                    <li><time datetime="{{ op.due|date:'Y-m-d' }}">{{ op.due }}</time>
+                        <a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }}</a>
+                        <small>{{ op.get_kind_display }} · {{ op.counterparty|default:op.project.name }}</small>
                     </li>
-                    {% endif %}{% endfor %}
-                </ul>
-            {% else %}<p class="empty">Aucun budget approuvé.</p>{% endif %}
-        </section>
-        <section class="panel" aria-labelledby="dashboard-alertes">
-            <h2 id="dashboard-alertes">Alertes</h2>
-            {% if alerts %}
-            <div id="dashboard-alertes-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
-            <ul class="clean dashboard-alert-counts" aria-label="Nombre d’alertes par catégorie">
-                {% for alert in alerts %}<li>{{ alert.label }} <strong>{{ alert.count }}</strong></li>{% endfor %}
-            </ul>
-            <h3>À examiner en priorité</h3>
-            {% endif %}
-            <ul class="clean dashboard-alerts">
-                {% if cash.forecast < 0 %}<li><strong>Trésorerie</strong><a class="button secondary compact" href="{% url 'company' member.company_id %}">Solde prévisionnel négatif · {{ cash.forecast }} {{ currency }}</a></li>{% endif %}
-                {% for project, stats in risks|slice:":5" %}
-                <li><strong>Budget</strong><a class="button secondary compact" href="{% url 'project' member.company_id project.pk %}#budget">{{ project.name }} · {% if stats.available < 0 %}Budget dépassé{% else %}Risque de dépassement{% endif %}</a></li>
-                {% endfor %}
-                {% for op, amount in overdue|slice:":5" %}
-                <li><strong>Impayé</strong><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }} · {{ op.due }}</a></li>
-                {% endfor %}
-                {% for op in pending %}
-                <li><strong>Validation</strong><a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ op.amount }} {{ currency }}</a></li>
-                {% endfor %}
-                {% for task in late_tasks %}
-                <li><strong>Tâche</strong><a class="button secondary compact" href="{% url 'project' member.company_id task.project_id %}#tâches">{{ task.title }} · {{ task.project }} · {{ task.end }}</a></li>
-                {% endfor %}
-            </ul>
-            {% if not alerts %}<p class="empty">Aucune alerte à traiter.</p>{% endif %}
-            <div class="actions"><a class="button secondary compact" href="{% url 'schedule' member.company_id %}">Ouvrir l’échéancier</a><a class="button secondary compact" href="{% url 'company' member.company_id %}#priorites">Voir les actions à traiter</a></div>
-        </section>
-        <section class="panel dashboard-deadlines" aria-labelledby="dashboard-echeances">
-            <h2 id="dashboard-echeances">Échéances à traiter</h2>
-            <p class="helptext">Montants exigibles aujourd’hui, en retard ou à échéance dans les 30 jours.</p>
-            {% if has_deadlines %}
-            <div id="dashboard-echeances-chart" class="dashboard-canvas" aria-hidden="true" hidden></div>
-            <div class="table-wrap" tabindex="0" role="region" aria-label="Échéances par horizon">
-                <table>
-                    <thead><tr><th scope="col">Horizon</th><th scope="col">À encaisser</th><th scope="col">À payer</th><th scope="col">Écart net</th></tr></thead>
-                    <tbody>
-                    {% for row in deadlines %}
-                    <tr>
-                        <th scope="row">{{ row.label }}</th>
-                        <td>{% if row.income %}<a class="button secondary compact" href="{% url 'schedule' member.company_id %}?kind=income{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À encaisser, {{ row.label }} : {{ row.income }} {{ currency }}">{{ row.income }} {{ currency }}</a><br><small>{{ row.income_count }} opération{{ row.income_count|pluralize }}</small>{% else %}—{% endif %}</td>
-                        <td>{% if row.expense %}<a class="button secondary compact" href="{% url 'schedule' member.company_id %}?kind=expense{% if row.start %}&amp;start={{ row.start|date:'Y-m-d' }}{% endif %}&amp;end={{ row.end|date:'Y-m-d' }}" aria-label="À payer, {{ row.label }} : {{ row.expense }} {{ currency }}">{{ row.expense }} {{ currency }}</a><br><small>{{ row.expense_count }} opération{{ row.expense_count|pluralize }}</small>{% else %}—{% endif %}</td>
-                        <td>{{ row.net }} {{ currency }}</td>
-                    </tr>
                     {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% if upcoming %}
-            <h3>Prochaines échéances</h3>
-            <ul class="clean dashboard-alerts">
-                {% for op, amount in upcoming %}
-                <li><time datetime="{{ op.due|date:'Y-m-d' }}">{{ op.due }}</time>
-                    <a class="button secondary compact" href="{% url 'operation' member.company_id op.pk %}">{{ op.title }} · {{ amount }} {{ currency }}</a>
-                    <small>{{ op.get_kind_display }} · {{ op.counterparty|default:op.project.name }}</small>
-                </li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% else %}<p class="empty">Aucune échéance ouverte sur cet horizon.</p>{% endif %}
-        </section>
+                </ul>
+                {% endif %}
+                {% else %}<p class="empty">Aucune échéance ouverte sur cet horizon.</p>{% endif %}
+            </section>
+        </div>
     </div>
 </div>
 {{ chart_data|json_script:"dashboard-data" }}
